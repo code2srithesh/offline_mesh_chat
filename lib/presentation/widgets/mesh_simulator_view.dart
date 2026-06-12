@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
 import '../../providers/simulation_provider.dart';
@@ -25,6 +27,22 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> {
     _nodeNameController.dispose();
     _logScrollController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _requestNearbyPermissions() async {
+    final Map<Permission, PermissionStatus> statuses = await [
+      Permission.location,
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.bluetoothAdvertise,
+    ].request();
+
+    final locationGranted = statuses[Permission.location]?.isGranted ?? false;
+    final scanGranted = statuses[Permission.bluetoothScan]?.isGranted ?? true;
+    final connectGranted = statuses[Permission.bluetoothConnect]?.isGranted ?? true;
+    final advertiseGranted = statuses[Permission.bluetoothAdvertise]?.isGranted ?? true;
+
+    return locationGranted && scanGranted && connectGranted && advertiseGranted;
   }
 
   void _scrollToBottom() {
@@ -69,7 +87,36 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> {
               Switch(
                 value: ref.watch(simulationModeProvider),
                 activeColor: AppTheme.mintGreen,
-                onChanged: (val) {
+                onChanged: (val) async {
+                  if (val == false) {
+                    // Switching to Native Mode
+                    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Native Nearby Connections is only supported on Android. Please use the Virtual Mesh Simulator.",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: AppTheme.crimsonRed,
+                        ),
+                      );
+                      return;
+                    }
+
+                    final granted = await _requestNearbyPermissions();
+                    if (!granted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Permissions are required to scan for real nearby devices.",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: AppTheme.crimsonRed,
+                        ),
+                      );
+                      return;
+                    }
+                  }
                   ref.read(simulationModeProvider.notifier).state = val;
                 },
               ),

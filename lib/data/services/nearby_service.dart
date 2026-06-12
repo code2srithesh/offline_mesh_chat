@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:nearby_connections/nearby_connections.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'communication_service.dart';
+import 'storage_service.dart';
 
 class NearbyService implements CommunicationService {
   static final NearbyService _instance = NearbyService._internal();
@@ -37,6 +39,32 @@ class NearbyService implements CommunicationService {
   @override
   Future<void> init() async {
     print("NearbyService initialized.");
+    if (!_isSupported) return;
+
+    final hasPerm = await checkPermissions();
+    if (hasPerm) {
+      final myProfile = await StorageService().getMyProfile();
+      final name = myProfile?.name ?? "Mesh Device";
+      final avatar = myProfile?.profilePicture ?? "";
+      await startAdvertising(name, avatar);
+      await startDiscovery();
+    } else {
+      print("NearbyService: Cannot auto-start discovery and advertising because permissions are not granted.");
+    }
+  }
+
+  Future<bool> checkPermissions() async {
+    if (!_isSupported) return false;
+    
+    final locationStatus = await Permission.location.status;
+    final scanStatus = await Permission.bluetoothScan.status;
+    final connectStatus = await Permission.bluetoothConnect.status;
+    final advertiseStatus = await Permission.bluetoothAdvertise.status;
+
+    return locationStatus.isGranted &&
+        scanStatus.isGranted &&
+        connectStatus.isGranted &&
+        advertiseStatus.isGranted;
   }
 
   bool get _isSupported => !kIsWeb && Platform.isAndroid;
@@ -48,9 +76,12 @@ class NearbyService implements CommunicationService {
       return;
     }
 
+    final myProfile = await StorageService().getMyProfile();
+    final myId = myProfile?.userId ?? "host-device";
+
     try {
       await Nearby().startDiscovery(
-        "my_user_id", // We will substitute this
+        myId, // We will substitute this
         strategy,
         onEndpointFound: (id, name, serviceId) {
           // Parse user information encoded in endpoint name
@@ -170,9 +201,12 @@ class NearbyService implements CommunicationService {
     _activeConnections[peer.deviceId] = PeerConnectionStatus.connecting;
     _connectionStatusController.add(Map.from(_activeConnections));
 
+    final myProfile = await StorageService().getMyProfile();
+    final myId = myProfile?.userId ?? "host-device";
+
     try {
       await Nearby().requestConnection(
-        "my_user_id",
+        myId,
         peer.connectionEndpoint,
         onConnectionInitiated: (id, info) async {
           await Nearby().acceptConnection(
