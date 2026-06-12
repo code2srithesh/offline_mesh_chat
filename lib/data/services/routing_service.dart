@@ -278,8 +278,10 @@ class RoutingService {
     final myProfile = await _storage.getMyProfile();
     if (myProfile == null) return;
 
-    final msgId = packet['messageId'] as String;
-    final receiverId = packet['receiverId'] as String;
+    final msgId = packet['messageId'] as String? ?? '';
+    final receiverId = packet['receiverId'] as String? ?? '';
+    if (msgId.isEmpty || receiverId.isEmpty) return;
+    
     final hops = List<String>.from(packet['hops'] ?? []);
 
     // 1. Check if we have already handled this message (prevent duplicate loops)

@@ -238,6 +238,11 @@ class MockCommunicationService implements CommunicationService {
         
         logSim("Node ${targetNode.name} received packet of type '$type' from $senderId");
 
+        if (type == 'routing_announcement') {
+          // Routing announcements are direct 1-hop link local broadcasts. Ignore or log.
+          return;
+        }
+
         if (receiverId == targetNode.deviceId) {
           // Target node received the message!
           logSim("🎉 Node ${targetNode.name} received message destined for it: '${packet['content']}'!");
@@ -256,7 +261,9 @@ class MockCommunicationService implements CommunicationService {
   }
 
   void _forwardPacketFromNode(SimulatedNode node, Map<String, dynamic> packet, String rawData) {
-    final receiverId = packet['receiverId'] as String;
+    final receiverId = packet['receiverId'] as String? ?? '';
+    if (receiverId.isEmpty) return;
+    
     final hops = List<String>.from(packet['hops'] ?? []);
     
     if (hops.contains(node.deviceId)) {
@@ -460,7 +467,8 @@ class MockCommunicationService implements CommunicationService {
       node.storeAndForwardQueue.clear();
 
       for (var packet in queue) {
-        final dest = packet['receiverId'] as String;
+        final dest = packet['receiverId'] as String? ?? '';
+        if (dest.isEmpty) continue;
         final nextHop = node.nextHops[dest];
         if (nextHop != null && nextHop.isNotEmpty) {
           logSim("Node ${node.name} flushed store-and-forward message destined for $dest -> next hop $nextHop");
