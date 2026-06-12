@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
 import '../../data/models/storage_models.dart';
@@ -79,15 +81,219 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
         'document',
       );
     } else if (type == 'location') {
-      // Send mock location (e.g. Bangalore Campus Library)
-      ref.read(messagesProvider(widget.chatId).notifier).sendLocationMessage(
-        12.9722,
-        77.5938,
-        "Bangalore Central Library (Block C)",
-      );
+      _pickLocation();
     } else if (type == 'voice') {
       _startRecording();
     }
+  }
+
+  void _pickLocation() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const LocationPickerSheet(),
+    );
+    if (result != null && mounted) {
+      ref.read(messagesProvider(widget.chatId).notifier).sendLocationMessage(
+        result['lat'] as double,
+        result['lon'] as double,
+        result['address'] as String,
+      );
+      _scrollToBottom();
+    }
+  }
+
+  void _showFullMapViewer(BuildContext context, double lat, double lon, String address) {
+    showDialog(
+      context: context,
+      useSafeArea: false,
+      builder: (context) {
+        return Dialog.fullscreen(
+          backgroundColor: AppTheme.obsidianBackground,
+          child: Column(
+            children: [
+              // Custom top bar
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.textColorPrimary),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "TACTICAL RADAR MAP",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.mintGreen,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            Text(
+                              address,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textColorPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Divider(color: AppTheme.borderLight, height: 1),
+              
+              // Full Screen Map
+              Expanded(
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      options: MapOptions(
+                        initialCenter: LatLng(lat, lon),
+                        initialZoom: 16.0,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.offline.mesh.chat',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(lat, lon),
+                              width: 80,
+                              height: 80,
+                              child: const Icon(
+                                Icons.location_on,
+                                color: AppTheme.crimsonRed,
+                                size: 46,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment.center,
+                            radius: 0.8,
+                            colors: [
+                              Colors.transparent,
+                              AppTheme.obsidianBackground.withOpacity(0.1),
+                              AppTheme.obsidianBackground.withOpacity(0.3),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Bottom tactical coordinates card
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  border: Border(
+                    top: BorderSide(color: AppTheme.borderLight, width: 1),
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "COORDINATE DATUM (WGS-84)",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textColorSecondary,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("LATITUDE", style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
+                              Text(
+                                lat.toStringAsFixed(6),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'monospace',
+                                  color: AppTheme.textColorPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("LONGITUDE", style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
+                              Text(
+                                lon.toStringAsFixed(6),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'monospace',
+                                  color: AppTheme.textColorPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.obsidianBackground,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.borderLight),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.wifi_off_rounded, color: AppTheme.mintGreen, size: 20),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                "Peer-to-Peer local mesh coordinates transfer complete. Map tile caches might be unavailable without internet connection.",
+                                style: TextStyle(fontSize: 11, color: AppTheme.textColorSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _startRecording() async {
@@ -551,32 +757,85 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
       final parts = message.content.split('|');
       final coordinates = parts[0];
       final address = parts.length > 1 ? parts[1] : "Bangalore Campus";
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 120,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.blueGrey.withOpacity(0.2),
+
+      final latLonParts = coordinates.split(',');
+      final double lat = double.tryParse(latLonParts.isNotEmpty ? latLonParts[0] : "") ?? 12.9716;
+      final double lon = double.tryParse(latLonParts.length > 1 ? latLonParts[1] : "") ?? 77.5946;
+
+      return GestureDetector(
+        onTap: () => _showFullMapViewer(context, lat, lon, address),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.borderLight),
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.map_outlined, size: 30, color: AppTheme.electricBlueLight),
-                  SizedBox(height: 6),
-                  Text("OpenStreetMap Preview", style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
-                ],
+              child: Container(
+                height: 140,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderLight),
+                ),
+                child: AbsorbPointer(
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: LatLng(lat, lon),
+                      initialZoom: 14.0,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.none,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.offline.mesh.chat',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(lat, lon),
+                            width: 40,
+                            height: 40,
+                            child: const Icon(
+                              Icons.location_on,
+                              color: AppTheme.crimsonRed,
+                              size: 30,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(address, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textColorPrimary, fontSize: 12)),
-          Text(coordinates, style: const TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.place_rounded, size: 16, color: AppTheme.mintGreen),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    address,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColorPrimary,
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              "${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}",
+              style: const TextStyle(fontSize: 10, color: AppTheme.textColorSecondary),
+            ),
+          ],
+        ),
       );
     } else if (message.messageType == 'audio') {
       return VoiceMessageBubble(message: message, isMe: isMe);
@@ -998,6 +1257,321 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class LocationPickerSheet extends StatefulWidget {
+  const LocationPickerSheet({super.key});
+
+  @override
+  State<LocationPickerSheet> createState() => _LocationPickerSheetState();
+}
+
+class _LocationPickerSheetState extends State<LocationPickerSheet> {
+  final MapController _mapController = MapController();
+  LatLng _selectedLatLng = const LatLng(12.9716, 77.5946); // Default to Bangalore Campus
+  String _selectedAddress = "Campus Library";
+
+  final List<Map<String, dynamic>> _landmarks = [
+    {'name': 'Campus Library', 'lat': 12.9716, 'lon': 77.5946},
+    {'name': 'Central Cafeteria', 'lat': 12.9728, 'lon': 77.5925},
+    {'name': 'Main Gate', 'lat': 12.9705, 'lon': 77.5910},
+    {'name': 'Block A Science Lab', 'lat': 12.9740, 'lon': 77.5950},
+    {'name': 'Sports Complex', 'lat': 12.9752, 'lon': 77.5930},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    
+    return Container(
+      height: screenHeight * 0.8,
+      decoration: const BoxDecoration(
+        color: AppTheme.obsidianBackground,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+        border: Border(
+          top: BorderSide(color: AppTheme.borderLight, width: 1.5),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Drag handle and Title Bar
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Column(
+              children: [
+                // Top drag handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.textColorSecondary.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.location_on_rounded, color: AppTheme.mintGreen),
+                        SizedBox(width: 8),
+                        Text(
+                          "Share Location",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textColorPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: AppTheme.textColorSecondary),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // The Interactive Map
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppTheme.borderLight),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _selectedLatLng,
+                        initialZoom: 15.0,
+                        onTap: (tapPosition, point) {
+                          setState(() {
+                            _selectedLatLng = point;
+                            _selectedAddress = "Custom Coordinates (${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)})";
+                          });
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.offline.mesh.chat',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _selectedLatLng,
+                              width: 80,
+                              height: 80,
+                              child: const Icon(
+                                Icons.location_on,
+                                color: AppTheme.crimsonRed,
+                                size: 42,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    // Compass / Recenter Button overlay
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: FloatingActionButton.small(
+                        heroTag: 'recenter_fab',
+                        backgroundColor: AppTheme.surfaceColor,
+                        foregroundColor: AppTheme.mintGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: const BorderSide(color: AppTheme.borderLight),
+                        ),
+                        onPressed: () {
+                          _mapController.move(_selectedLatLng, 15.0);
+                        },
+                        child: const Icon(Icons.my_location),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Landmarks horizontal list
+          const SizedBox(height: 12),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "CAMPUS LANDMARKS (PRESETS)",
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: AppTheme.textColorSecondary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 46,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _landmarks.length,
+              itemBuilder: (context, index) {
+                final landmark = _landmarks[index];
+                final isSelected = _selectedAddress == landmark['name'];
+                
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: AnimatedPress(
+                    onTap: () {
+                      setState(() {
+                        _selectedLatLng = LatLng(landmark['lat'], landmark['lon']);
+                        _selectedAddress = landmark['name'];
+                      });
+                      _mapController.move(_selectedLatLng, 15.0);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppTheme.mintGreen.withOpacity(0.15) : AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected ? AppTheme.mintGreen : AppTheme.borderLight,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.place_rounded,
+                            size: 16,
+                            color: isSelected ? AppTheme.mintGreenLight : AppTheme.textColorSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            landmark['name'],
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? AppTheme.textColorPrimary : AppTheme.textColorSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // Display current selected details and action button
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: AppTheme.glassCardDecoration(
+                      color: AppTheme.surfaceColor.withOpacity(0.8),
+                      borderRadius: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: Colors.black26,
+                          child: Icon(Icons.place, color: AppTheme.crimsonRed),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedAddress,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textColorPrimary,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "Lat: ${_selectedLatLng.latitude.toStringAsFixed(5)}, Lon: ${_selectedLatLng.longitude.toStringAsFixed(5)}",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textColorSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AnimatedPress(
+                    onTap: () {
+                      Navigator.of(context).pop({
+                        'lat': _selectedLatLng.latitude,
+                        'lon': _selectedLatLng.longitude,
+                        'address': _selectedAddress,
+                      });
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.premiumGreenGradient,
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.mintGreen.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        "SHARE LOCATION VIA MESH",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
