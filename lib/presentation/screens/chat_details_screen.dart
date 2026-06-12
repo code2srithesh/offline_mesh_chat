@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,10 +10,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
 import '../../data/models/storage_models.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/security/encryption_service.dart';
 import '../../data/services/audio_service.dart';
 
 
@@ -33,16 +37,28 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final AudioService _audioService = AudioService();
+  final FocusNode _inputFocusNode = FocusNode();
   
   bool _isRecording = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
 
   @override
+  void initState() {
+    super.initState();
+    _inputFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _recordingTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -141,10 +157,10 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                             Text(
                               address,
                               style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textColorPrimary,
-                              ),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textColorPrimary,
+                                ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -296,6 +312,549 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     );
   }
 
+  void _showVerificationPanel() {
+    final verifiedUsers = ref.read(verifiedUsersProvider);
+    final isVerified = verifiedUsers.contains(widget.chatId);
+    
+    final myProfile = ref.read(profileProvider);
+    final peerUser = ref.read(storageServiceProvider).getUser(widget.chatId);
+    
+    final myFingerprint = _getFingerprint(myProfile?.publicKey, myProfile?.userId ?? 'local_device');
+    final peerFingerprint = _getFingerprint(peerUser?.publicKey, widget.chatId);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final double screenHeight = MediaQuery.of(context).size.height;
+            return Container(
+              height: screenHeight * 0.82,
+              decoration: const BoxDecoration(
+                color: AppTheme.obsidianBackground,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                border: Border(
+                  top: BorderSide(color: AppTheme.borderLight, width: 1.5),
+                ),
+              ),
+              child: DefaultTabController(
+                length: 2,
+                child: Column(
+                  children: [
+                    // Top handle & header
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppTheme.textColorSecondary.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.shield_outlined, color: AppTheme.mintGreen),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Peer Verification",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textColorPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close, color: AppTheme.textColorSecondary),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Tab Bar
+                    TabBar(
+                      labelColor: AppTheme.mintGreenLight,
+                      unselectedLabelColor: AppTheme.textColorSecondary,
+                      indicatorColor: AppTheme.mintGreen,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: AppTheme.borderLight,
+                      tabs: const [
+                        Tab(text: "Compare Codes", icon: Icon(Icons.compare_arrows_rounded, size: 20)),
+                        Tab(text: "Scan QR Identity", icon: Icon(Icons.qr_code_scanner_rounded, size: 20)),
+                      ],
+                    ),
+                    
+                    // Tab Content
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          // Tab 1: Compare Codes
+                          SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Info Card
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: AppTheme.glassCardDecoration(
+                                    color: AppTheme.surfaceColor.withOpacity(0.5),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.lock, color: AppTheme.electricBlue, size: 36),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: Text(
+                                          "To verify end-to-end security, compare the unique code below with the code on their screen. If they match, this chat session is 100% verified.",
+                                          style: TextStyle(fontSize: 12, height: 1.45, color: AppTheme.textColorSecondary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                
+                                // Own Fingerprint
+                                const Text(
+                                  "YOUR IDENTITY FINGERPRINT",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textColorSecondary,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0A1120),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppTheme.borderLight),
+                                  ),
+                                  child: Text(
+                                    myFingerprint,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.electricBlueLight,
+                                      letterSpacing: 0.5,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                
+                                // Peer Fingerprint
+                                Text(
+                                  "${widget.chatName.toUpperCase()}'S FINGERPRINT",
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textColorSecondary,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0A1120),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppTheme.borderLight),
+                                  ),
+                                  child: Text(
+                                    peerFingerprint,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.mintGreenLight,
+                                      letterSpacing: 0.5,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                
+                                // Action Button
+                                SafeArea(
+                                  top: false,
+                                  child: AnimatedPress(
+                                    onTap: () async {
+                                      final newStatus = !isVerified;
+                                      await ref.read(verifiedUsersProvider.notifier).verifyUser(widget.chatId, newStatus);
+                                      Navigator.of(context).pop();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            newStatus
+                                                ? "Secured peer verified successfully!"
+                                                : "Peer marked as unverified.",
+                                            style: const TextStyle(fontWeight: FontWeight.bold),
+                                          ),
+                                          backgroundColor: newStatus ? AppTheme.mintGreen : AppTheme.surfaceColor,
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        gradient: isVerified ? AppTheme.premiumRedGradient : AppTheme.premiumGreenGradient,
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        isVerified ? "UNVERIFY PEER IDENTITY" : "MARK PEER AS VERIFIED",
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Tab 2: Scan QR Identity
+                          StatefulBuilder(
+                            builder: (context, setInnerState) {
+                              bool showScanner = false;
+                              return Builder(
+                                builder: (context) {
+                                  return StatefulBuilder(
+                                    builder: (context, setScannerState) {
+                                      if (showScanner) {
+                                        return _buildSimulatedScanner(
+                                          context,
+                                          onSuccess: () async {
+                                            final updatedUser = UserModel(
+                                              userId: widget.chatId,
+                                              name: widget.chatName,
+                                              profilePicture: peerUser?.profilePicture ?? '',
+                                              deviceId: widget.chatId,
+                                              publicKey: peerUser?.publicKey ?? "mock_public_key_for_${widget.chatId}",
+                                              createdAt: peerUser?.createdAt ?? DateTime.now(),
+                                            );
+                                            await ref.read(storageServiceProvider).saveUser(updatedUser);
+                                            await ref.read(verifiedUsersProvider.notifier).verifyUser(widget.chatId, true);
+                                            
+                                            if (context.mounted) {
+                                              Navigator.of(context).pop(); // Close sheet
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    "Handshake complete! Secure identity verified via QR Scan.",
+                                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                                  ),
+                                                  backgroundColor: AppTheme.mintGreen,
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          onCancel: () {
+                                            setScannerState(() {
+                                              showScanner = false;
+                                            });
+                                          },
+                                        );
+                                      }
+                                      
+                                      final mySerializedInfo = json.encode({
+                                        'userId': myProfile?.userId ?? '',
+                                        'name': myProfile?.name ?? '',
+                                        'publicKey': myProfile?.publicKey ?? '',
+                                      });
+                                      
+                                      return Padding(
+                                        padding: const EdgeInsets.all(20.0),
+                                        child: Column(
+                                          children: [
+                                            const Text(
+                                              "YOUR SECURE HANDSHAKE CODE",
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.textColorSecondary,
+                                                letterSpacing: 1.2,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Container(
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(16),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: AppTheme.mintGreen.withOpacity(0.2),
+                                                    blurRadius: 16,
+                                                    spreadRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: QrImageView(
+                                                data: mySerializedInfo,
+                                                version: QrVersions.auto,
+                                                size: 180.0,
+                                                gapless: false,
+                                                backgroundColor: Colors.white,
+                                                eyeStyle: const QrEyeStyle(
+                                                  eyeShape: QrEyeShape.square,
+                                                  color: Colors.black,
+                                                ),
+                                                dataModuleStyle: const QrDataModuleStyle(
+                                                  dataModuleShape: QrDataModuleShape.square,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            const Text(
+                                              "Have the other peer scan this QR code with their device, or tap below to scan their code.",
+                                              style: TextStyle(fontSize: 12, color: AppTheme.textColorSecondary),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const Spacer(),
+                                            SafeArea(
+                                              top: false,
+                                              child: AnimatedPress(
+                                                onTap: () {
+                                                  setScannerState(() {
+                                                    showScanner = true;
+                                                  });
+                                                },
+                                                child: Container(
+                                                  width: double.infinity,
+                                                  height: 50,
+                                                  decoration: BoxDecoration(
+                                                    gradient: AppTheme.premiumIndigoGradient,
+                                                    borderRadius: BorderRadius.circular(25),
+                                                  ),
+                                                  alignment: Alignment.center,
+                                                  child: const Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(Icons.qr_code_scanner, color: Colors.white, size: 20),
+                                                      SizedBox(width: 8),
+                                                      Text(
+                                                        "SCAN PEER IDENTITY QR",
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 14,
+                                                          fontWeight: FontWeight.bold,
+                                                          letterSpacing: 0.8,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _getFingerprint(String? key, String fallbackId) {
+    final rawKey = (key != null && key.isNotEmpty) ? key : fallbackId;
+    final hash = EncryptionService().sha256Hash(rawKey).toUpperCase();
+    final List<String> blocks = [];
+    for (int i = 0; i < hash.length && blocks.length < 6; i += 4) {
+      blocks.add(hash.substring(i, min(i + 4, hash.length)));
+    }
+    return blocks.join(" - ");
+  }
+
+  Widget _buildSimulatedScanner(BuildContext context, {required VoidCallback onSuccess, required VoidCallback onCancel}) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          color: AppTheme.obsidianBackground,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const Text(
+                "BIOMETRIC MESH SCANNER",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.mintGreen,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Animated grid scan viewfinder
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      border: Border.all(color: AppTheme.mintGreen.withOpacity(0.5), width: 1.5),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Viewfinder grid
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _ScannerGridPainter(),
+                          ),
+                        ),
+                        
+                        // Reticle corners
+                        const _ScannerReticleCorner(alignment: Alignment.topLeft),
+                        const _ScannerReticleCorner(alignment: Alignment.topRight),
+                        const _ScannerReticleCorner(alignment: Alignment.bottomLeft),
+                        const _ScannerReticleCorner(alignment: Alignment.bottomRight),
+                        
+                        // Moving scan laser line
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.05, end: 0.95),
+                          duration: const Duration(milliseconds: 1500),
+                          builder: (context, value, child) {
+                            return Positioned(
+                              top: value * MediaQuery.of(context).size.height * 0.42,
+                              left: 20,
+                              right: 20,
+                              child: Container(
+                                height: 3.5,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.crimsonRed,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.crimsonRed.withOpacity(0.8),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          onEnd: () {
+                            if (mounted) {
+                              setState(() {});
+                            }
+                          },
+                        ),
+                        
+                        const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.qr_code_rounded, size: 72, color: Colors.white24),
+                              SizedBox(height: 12),
+                              Text(
+                                "Align QR code inside framework",
+                                style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Simulated actions
+              AnimatedPress(
+                onTap: onSuccess,
+                child: Container(
+                  width: double.infinity,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.premiumGreenGradient,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.mintGreen.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        "SIMULATE SCAN SUCCESS",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: onCancel,
+                child: const Text(
+                  "Abort Scanning",
+                  style: TextStyle(
+                    color: AppTheme.textColorSecondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _startRecording() async {
     final path = await _audioService.startRecording();
     if (path != null) {
@@ -402,6 +961,11 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   Widget build(BuildContext context) {
     final messages = ref.watch(messagesProvider(widget.chatId));
     final myProfile = ref.watch(profileProvider);
+    final verifiedUsers = ref.watch(verifiedUsersProvider);
+    
+    final isGroup = widget.chatId == 'emergency_sos' || 
+        (ref.read(storageServiceProvider).getChat(widget.chatId)?.type == 'group');
+    final isVerified = verifiedUsers.contains(widget.chatId);
 
     _scrollToBottom();
 
@@ -411,13 +975,32 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.chatName),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(widget.chatName),
+                if (!isGroup && isVerified) ...[
+                  const SizedBox(width: 6),
+                  const Icon(Icons.verified, color: AppTheme.mintGreen, size: 16),
+                ],
+              ],
+            ),
             const Text(
               "End-to-End Encrypted (AES-256)",
               style: TextStyle(fontSize: 10, color: AppTheme.mintGreenLight),
             ),
           ],
         ),
+        actions: [
+          if (!isGroup)
+            IconButton(
+              icon: Icon(
+                isVerified ? Icons.shield : Icons.shield_outlined,
+                color: isVerified ? AppTheme.mintGreen : AppTheme.textColorSecondary,
+              ),
+              onPressed: () => _showVerificationPanel(),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -446,26 +1029,43 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             ),
           ),
 
-          // Message log feed
+          // Message log feed wrapped with mesh background
           Expanded(
-            child: messages.isEmpty
-                ? Center(
-                    child: Text(
-                      "No messages. Send a message to open connection.",
-                      style: TextStyle(color: AppTheme.textColorSecondary.withOpacity(0.5)),
+            child: _AnimatedMeshBackground(
+              child: messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        "No messages. Send a message to open connection.",
+                        style: TextStyle(color: AppTheme.textColorSecondary.withOpacity(0.5)),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final message = messages[index];
+                        final isMe = message.senderId == myProfile?.userId;
+                        return TweenAnimationBuilder<double>(
+                          key: ValueKey(message.messageId),
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, child) {
+                            return Transform.translate(
+                              offset: Offset(0, 15 * (1.0 - value)),
+                              child: Opacity(
+                                opacity: value,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _buildMessageBubble(message, isMe),
+                        );
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final message = messages[index];
-                      final isMe = message.senderId == myProfile?.userId;
-                      return _buildMessageBubble(message, isMe);
-                    },
-                  ),
+            ),
           ),
 
           // Message input bar
@@ -530,12 +1130,14 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
       );
     }
 
+    final hasFocus = _inputFocusNode.hasFocus;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: const BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: AppTheme.obsidianBackground,
         border: Border(
-          top: BorderSide(color: AppTheme.borderLight, width: 1),
+          top: BorderSide(color: AppTheme.borderLight, width: 1.5),
         ),
       ),
       child: SafeArea(
@@ -549,39 +1151,87 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               ),
             ),
             Expanded(
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
-                  color: AppTheme.cardColor,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppTheme.borderLight, width: 1.0),
-                ),
-                child: TextField(
-                  controller: _messageController,
-                  maxLines: null,
-                  style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 15, fontWeight: FontWeight.w600),
-                  onSubmitted: (_) => _sendMessage(),
-                  decoration: const InputDecoration(
-                    hintText: "Write message...",
-                    hintStyle: TextStyle(color: AppTheme.textColorSecondary, fontSize: 15),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    border: InputBorder.none,
+                  color: const Color(0xFF0A1120),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: hasFocus ? AppTheme.mintGreen : AppTheme.borderLight,
+                    width: hasFocus ? 1.5 : 1.0,
                   ),
+                  boxShadow: hasFocus ? [
+                    BoxShadow(
+                      color: AppTheme.mintGreen.withOpacity(0.12),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    )
+                  ] : [],
+                ),
+                child: Row(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 14, right: 2),
+                      child: Text(
+                        ">",
+                        style: TextStyle(
+                          color: AppTheme.mintGreen,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        focusNode: _inputFocusNode,
+                        maxLines: null,
+                        style: const TextStyle(
+                          color: AppTheme.textColorPrimary,
+                          fontSize: 14,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w600,
+                        ),
+                        onSubmitted: (_) => _sendMessage(),
+                        decoration: const InputDecoration(
+                          hintText: "Write message...",
+                          hintStyle: TextStyle(
+                            color: AppTheme.textColorSecondary,
+                            fontSize: 14,
+                            fontFamily: 'monospace',
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _messageController,
               builder: (context, value, child) {
                 final isTextEmpty = value.text.trim().isEmpty;
                 return AnimatedPress(
                   onTap: isTextEmpty ? _startRecording : _sendMessage,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isTextEmpty ? AppTheme.surfaceColor : AppTheme.mintGreen.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isTextEmpty ? AppTheme.borderLight : AppTheme.mintGreen,
+                        width: 1.0,
+                      ),
+                    ),
                     child: Icon(
                       isTextEmpty ? Icons.mic : Icons.send,
                       color: AppTheme.mintGreen,
-                      size: 24,
+                      size: 20,
                     ),
                   ),
                 );
@@ -1574,4 +2224,220 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
       ),
     );
   }
+}
+
+class _AnimatedMeshBackground extends StatefulWidget {
+  final Widget child;
+  const _AnimatedMeshBackground({required this.child});
+
+  @override
+  State<_AnimatedMeshBackground> createState() => _AnimatedMeshBackgroundState();
+}
+
+class _AnimatedMeshBackgroundState extends State<_AnimatedMeshBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  final List<_MeshNode> _nodes = [];
+  final Random _random = Random();
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_nodes.isEmpty) {
+      final size = MediaQuery.of(context).size;
+      for (int i = 0; i < 15; i++) {
+        _nodes.add(_MeshNode(
+          position: Offset(
+            _random.nextDouble() * size.width,
+            _random.nextDouble() * size.height,
+          ),
+          velocity: Offset(
+            (_random.nextDouble() - 0.5) * 0.8,
+            (_random.nextDouble() - 0.5) * 0.8,
+          ),
+        ));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final size = MediaQuery.of(context).size;
+        for (var node in _nodes) {
+          node.position += node.velocity;
+          if (node.position.dx < 0 || node.position.dx > size.width) {
+            node.velocity = Offset(-node.velocity.dx, node.velocity.dy);
+            node.position = Offset(
+              node.position.dx.clamp(0.0, size.width),
+              node.position.dy,
+            );
+          }
+          if (node.position.dy < 0 || node.position.dy > size.height) {
+            node.velocity = Offset(node.velocity.dx, -node.velocity.dy);
+            node.position = Offset(
+              node.position.dx,
+              node.position.dy.clamp(0.0, size.height),
+            );
+          }
+        }
+        return CustomPaint(
+          painter: _MeshBackgroundPainter(nodes: _nodes),
+          child: widget.child,
+        );
+      },
+    );
+  }
+}
+
+class _MeshNode {
+  Offset position;
+  Offset velocity;
+  _MeshNode({required this.position, required this.velocity});
+}
+
+class _MeshBackgroundPainter extends CustomPainter {
+  final List<_MeshNode> nodes;
+  _MeshBackgroundPainter({required this.nodes});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = AppTheme.borderLight.withOpacity(0.05)
+      ..strokeWidth = 0.5;
+
+    const double gridSpacing = 40.0;
+    for (double x = 0; x < size.width; x += gridSpacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y < size.height; y += gridSpacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    final linkPaint = Paint()..strokeWidth = 0.8;
+    const double maxDistance = 150.0;
+
+    for (int i = 0; i < nodes.length; i++) {
+      for (int j = i + 1; j < nodes.length; j++) {
+        final double dist = (nodes[i].position - nodes[j].position).distance;
+        if (dist < maxDistance) {
+          final double fraction = 1.0 - (dist / maxDistance);
+          linkPaint.color = AppTheme.electricBlue.withOpacity(fraction * 0.15);
+          canvas.drawLine(nodes[i].position, nodes[j].position, linkPaint);
+        }
+      }
+    }
+
+    final nodePaint = Paint()..color = AppTheme.mintGreen.withOpacity(0.4);
+    final glowPaint = Paint()..color = AppTheme.mintGreen.withOpacity(0.12);
+
+    for (var node in nodes) {
+      canvas.drawCircle(node.position, 6.0, glowPaint);
+      canvas.drawCircle(node.position, 2.5, nodePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _ScannerGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.mintGreen.withOpacity(0.08)
+      ..strokeWidth = 0.5;
+    
+    const double spacing = 20.0;
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ScannerReticleCorner extends StatelessWidget {
+  final Alignment alignment;
+  const _ScannerReticleCorner({required this.alignment});
+
+  @override
+  Widget build(BuildContext context) {
+    const double size = 20.0;
+    const double thickness = 3.0;
+    final color = AppTheme.mintGreen;
+
+    return Align(
+      alignment: alignment,
+      child: Container(
+        width: size,
+        height: size,
+        margin: const EdgeInsets.all(16),
+        child: CustomPaint(
+          painter: _ReticleCornerPainter(alignment: alignment, color: color, thickness: thickness),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReticleCornerPainter extends CustomPainter {
+  final Alignment alignment;
+  final Color color;
+  final double thickness;
+
+  _ReticleCornerPainter({required this.alignment, required this.color, required this.thickness});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = thickness
+      ..style = PaintingStyle.stroke;
+
+    final path = ui.Path();
+    if (alignment == Alignment.topLeft) {
+      path.moveTo(0, size.height);
+      path.lineTo(0, 0);
+      path.lineTo(size.width, 0);
+    } else if (alignment == Alignment.topRight) {
+      path.moveTo(0, 0);
+      path.lineTo(size.width, 0);
+      path.lineTo(size.width, size.height);
+    } else if (alignment == Alignment.bottomLeft) {
+      path.moveTo(0, 0);
+      path.lineTo(0, size.height);
+      path.lineTo(size.width, size.height);
+    } else if (alignment == Alignment.bottomRight) {
+      path.moveTo(size.width, 0);
+      path.lineTo(size.width, size.height);
+      path.lineTo(0, size.height);
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

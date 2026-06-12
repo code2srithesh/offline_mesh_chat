@@ -204,6 +204,7 @@ class _ChatsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chats = ref.watch(chatsProvider);
+    final verifiedUsers = ref.watch(verifiedUsersProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.obsidianBackground,
@@ -272,13 +273,21 @@ class _ChatsTab extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    title: Text(
-                      chat.name,
-                      style: const TextStyle(
-                        color: AppTheme.textColorPrimary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
+                    title: Row(
+                      children: [
+                        Text(
+                          chat.name,
+                          style: const TextStyle(
+                            color: AppTheme.textColorPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (!isGroup && verifiedUsers.contains(chat.chatId)) ...[
+                          const SizedBox(width: 6),
+                          const Icon(Icons.verified, color: AppTheme.mintGreen, size: 16),
+                        ],
+                      ],
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4.0),

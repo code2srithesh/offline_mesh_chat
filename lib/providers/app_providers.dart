@@ -117,3 +117,38 @@ final routingLogsProvider = StreamProvider<String>((ref) {
   return routing.routingLogStream;
 });
 
+// --- Verified Users Provider ---
+class VerifiedUsersNotifier extends StateNotifier<Set<String>> {
+  final StorageService _storage;
+  
+  VerifiedUsersNotifier(this._storage) : super({}) {
+    _load();
+  }
+
+  void _load() {
+    final verified = <String>{};
+    for (var user in _storage.getAllUsers()) {
+      if (_storage.isUserVerified(user.userId)) {
+        verified.add(user.userId);
+      }
+    }
+    state = verified;
+  }
+
+  Future<void> verifyUser(String userId, bool isVerified) async {
+    await _storage.setUserVerification(userId, isVerified);
+    if (isVerified) {
+      state = {...state, userId};
+    } else {
+      final copy = Set<String>.from(state);
+      copy.remove(userId);
+      state = copy;
+    }
+  }
+}
+
+final verifiedUsersProvider = StateNotifierProvider<VerifiedUsersNotifier, Set<String>>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return VerifiedUsersNotifier(storage);
+});
+

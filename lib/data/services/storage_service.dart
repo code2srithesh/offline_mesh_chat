@@ -51,6 +51,9 @@ class StorageService {
   String? getMyUserId() => _settingsBox.get('my_user_id');
   Future<void> setMyUserId(String userId) async => await _settingsBox.put('my_user_id', userId);
 
+  bool isUserVerified(String userId) => _settingsBox.get('verified_$userId', defaultValue: false) as bool;
+  Future<void> setUserVerification(String userId, bool verified) async => await _settingsBox.put('verified_$userId', verified);
+
   String? getPrivateKey() => _settingsBox.get('my_private_key');
   Future<void> savePrivateKey(String privateKey) async => await _settingsBox.put('my_private_key', privateKey);
 
