@@ -217,16 +217,24 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
         children: [
           // Security pairing banner
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-            color: const Color(0xFF161D30),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            decoration: AppTheme.glassCardDecoration(
+              color: const Color(0x1510B981),
+              borderRadius: 12,
+              borderColor: AppTheme.mintGreen.withOpacity(0.18),
+              borderWidth: 1.0,
+            ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock_outline, size: 12, color: AppTheme.mintGreen),
-                SizedBox(width: 6),
-                Text(
-                  "Keys established automatically. Peer paired via public key exchange.",
-                  style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary),
+                Icon(Icons.lock_rounded, size: 14, color: AppTheme.mintGreenLight),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "End-to-End Encrypted (AES-256). Peer verified via handshake.",
+                    style: TextStyle(fontSize: 10, color: AppTheme.mintGreenLight, fontWeight: FontWeight.bold, letterSpacing: 0.1),
+                  ),
                 )
               ],
             ),
@@ -243,6 +251,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                   )
                 : ListView.builder(
                     controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
@@ -275,10 +284,13 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             children: [
               const _BlinkingRecordDot(),
               const SizedBox(width: 8),
+              const _RecordingWaveform(),
+              const SizedBox(width: 12),
               Text(
-                "Recording (${_formatDuration(_recordingSeconds)})",
+                _formatDuration(_recordingSeconds),
                 style: const TextStyle(
                   color: AppTheme.textColorPrimary,
+                  fontFamily: 'monospace',
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -323,22 +335,25 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: AppTheme.mintGreen),
-              onPressed: _showAttachmentSheet,
-              tooltip: "Attach simulated file",
+            AnimatedPress(
+              onTap: _showAttachmentSheet,
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.add_circle_outline, color: AppTheme.mintGreen, size: 24),
+              ),
             ),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
                   color: AppTheme.cardColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppTheme.borderLight, width: 1),
+                  border: Border.all(color: AppTheme.borderLight, width: 1.0),
                 ),
                 child: TextField(
                   controller: _messageController,
                   maxLines: null,
-                  style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 15),
+                  style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 15, fontWeight: FontWeight.w600),
+                  onSubmitted: (_) => _sendMessage(),
                   decoration: const InputDecoration(
                     hintText: "Write message...",
                     hintStyle: TextStyle(color: AppTheme.textColorSecondary, fontSize: 15),
@@ -353,13 +368,16 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               valueListenable: _messageController,
               builder: (context, value, child) {
                 final isTextEmpty = value.text.trim().isEmpty;
-                return IconButton(
-                  icon: Icon(
-                    isTextEmpty ? Icons.mic : Icons.send,
-                    color: AppTheme.mintGreen,
+                return AnimatedPress(
+                  onTap: isTextEmpty ? _startRecording : _sendMessage,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Icon(
+                      isTextEmpty ? Icons.mic : Icons.send,
+                      color: AppTheme.mintGreen,
+                      size: 24,
+                    ),
                   ),
-                  onPressed: isTextEmpty ? _startRecording : _sendMessage,
-                  tooltip: isTextEmpty ? "Record Voice Note" : "Send Message",
                 );
               },
             ),
@@ -376,8 +394,46 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   }
 
   Widget _buildMessageBubble(MessageModel message, bool isMe) {
-    final bubbleColor = isMe ? const Color(0xFF0F5244) : AppTheme.surfaceColor;
     final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final bubbleDecoration = isMe
+        ? BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F5244), Color(0xFF0C4237)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(4),
+            ),
+            border: Border.all(color: AppTheme.mintGreen.withOpacity(0.2), width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              )
+            ],
+          )
+        : BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(4),
+              bottomRight: Radius.circular(20),
+            ),
+            border: Border.all(color: AppTheme.borderLight, width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              )
+            ],
+          );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -388,28 +444,25 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             children: [
               if (!isMe) ...[
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppTheme.cardColor,
-                  child: const Text("👤", style: TextStyle(fontSize: 12)),
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.cardColor,
+                    border: Border.all(color: AppTheme.borderLight, width: 1.0),
+                  ),
+                  child: const Text("👤", style: TextStyle(fontSize: 14)),
                 ),
                 const SizedBox(width: 8),
               ],
               GestureDetector(
                 onTap: () => _showMessageHopsInfo(message),
                 child: Container(
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
-                      bottomRight: isMe ? Radius.zero : const Radius.circular(16),
-                    ),
-                    border: Border.all(color: AppTheme.borderLight, width: 0.5),
-                  ),
+                  decoration: bubbleDecoration,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -453,7 +506,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     if (message.messageType == 'text') {
       return Text(
         message.content,
-        style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 14),
+        style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 14, height: 1.3),
       );
     } else if (message.messageType == 'image') {
       return Column(
@@ -540,11 +593,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             : message.routePath.join(" ➔ ");
         return AlertDialog(
           backgroundColor: AppTheme.surfaceColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Row(
             children: [
               Icon(Icons.hub_outlined, color: AppTheme.electricBlueLight),
               SizedBox(width: 8),
-              Text("Message Hops Info", style: TextStyle(color: AppTheme.textColorPrimary)),
+              Text("Message Hops Info", style: TextStyle(color: AppTheme.textColorPrimary, fontWeight: FontWeight.bold)),
             ],
           ),
           content: Column(
@@ -571,15 +625,15 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text("Hop Count: ${message.routePath.length}", style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 13)),
+              Text("Hop Count: ${message.routePath.length}", style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
-              Text("Status: ${message.status.toUpperCase()}", style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 13)),
+              Text("Status: ${message.status.toUpperCase()}", style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Close", style: TextStyle(color: AppTheme.mintGreen)),
+              child: const Text("Close", style: TextStyle(color: AppTheme.mintGreen, fontWeight: FontWeight.bold)),
             )
           ],
         );
@@ -635,6 +689,121 @@ class _BlinkingRecordDotState extends State<_BlinkingRecordDot>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RecordingWaveform extends StatefulWidget {
+  const _RecordingWaveform();
+
+  @override
+  State<_RecordingWaveform> createState() => _RecordingWaveformState();
+}
+
+class _RecordingWaveformState extends State<_RecordingWaveform> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final List<double> _heights = [10, 20, 14, 26, 18, 12, 24, 16, 22, 10];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(_heights.length, (index) {
+            final double animatedHeight = _heights[index] * (0.3 + 0.7 * _controller.value);
+            return Container(
+              width: 3.0,
+              height: animatedHeight,
+              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+              decoration: BoxDecoration(
+                color: AppTheme.crimsonRed,
+                borderRadius: BorderRadius.circular(1.5),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
+class _MiniEqualizer extends StatefulWidget {
+  final bool isPlaying;
+  final Color color;
+
+  const _MiniEqualizer({required this.isPlaying, required this.color});
+
+  @override
+  State<_MiniEqualizer> createState() => _MiniEqualizerState();
+}
+
+class _MiniEqualizerState extends State<_MiniEqualizer> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    if (widget.isPlaying) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _MiniEqualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPlaying) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            final double val = widget.isPlaying ? (0.2 + 0.8 * _controller.value) : 0.3;
+            final double height = (index == 0 ? 12 : index == 1 ? 16 : 8) * val;
+            return Container(
+              width: 2.0,
+              height: height,
+              margin: const EdgeInsets.symmetric(horizontal: 1.0),
+              color: widget.color,
+            );
+          }),
+        );
+      },
     );
   }
 }
@@ -767,6 +936,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
+    final playerColor = widget.isMe ? Colors.white : AppTheme.mintGreen;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -778,7 +948,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
               padding: const EdgeInsets.all(6.0),
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: widget.isMe ? Colors.white : AppTheme.mintGreen,
+                color: playerColor,
               ),
             ),
           )
@@ -788,11 +958,16 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             padding: EdgeInsets.zero,
             icon: Icon(
               _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: widget.isMe ? Colors.white : AppTheme.mintGreen,
+              color: playerColor,
               size: 28,
             ),
             onPressed: _togglePlay,
           ),
+        const SizedBox(width: 4),
+        _MiniEqualizer(
+          isPlaying: _isPlaying,
+          color: playerColor.withOpacity(0.8),
+        ),
         const SizedBox(width: 4),
         Expanded(
           child: SliderTheme(

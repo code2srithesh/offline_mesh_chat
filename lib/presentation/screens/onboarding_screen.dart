@@ -11,18 +11,42 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _nameController = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
   bool _isLoading = false;
+  bool _isNameFocused = false;
   String _selectedAvatar = "🚀";
 
   final List<String> _avatars = ["🚀", "👾", "🤖", "🦊", "🐼", "🦁", "🦖", "🦄", "⚽️", "🎨", "🎸", "💻"];
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameFocusNode.addListener(() {
+      setState(() {
+        _isNameFocused = _nameFocusNode.hasFocus;
+      });
+    });
+
+    // Pulse animation for selected avatar aura
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
 
   Future<void> _handleGetStarted() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your display name.')),
+        SnackBar(
+          content: const Text('Please enter your display name.', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: AppTheme.crimsonRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       return;
     }
@@ -31,20 +55,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _isLoading = true;
     });
 
-    // Generate keys & create profile (simulated delay for key generation visual feedback)
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Secure key pair generation simulated feedback
+    await Future.delayed(const Duration(milliseconds: 1200));
     await ref.read(profileProvider.notifier).createUserProfile(name, _selectedAvatar);
 
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const HomeScreen(),
+          transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 400),
+        ),
       );
     }
   }
 
   @override
   void dispose() {
+    _nameFocusNode.dispose();
     _nameController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -54,90 +84,136 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       backgroundColor: AppTheme.obsidianBackground,
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
-                const Icon(
-                  Icons.security_rounded,
-                  size: 60,
-                  color: AppTheme.mintGreen,
+                
+                // Security Icon with Soft Pulsing Aura
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.mintGreen.withOpacity(0.08),
+                    border: Border.all(
+                      color: AppTheme.mintGreen.withOpacity(0.15),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.security_rounded,
+                    size: 54,
+                    color: AppTheme.mintGreen,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
+                
                 const Text(
                   'Onboarding',
                   style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
                     color: AppTheme.textColorPrimary,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Create your offline profile. Your private keys will be generated and stored securely only on this device.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textColorSecondary,
+                const SizedBox(height: 10),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Create your offline profile. Your unique private keys will be generated and stored securely on this device.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textColorSecondary,
+                      height: 1.45,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 36),
 
-                // Avatar Picker
-                Text(
-                  'Choose Profile Avatar',
+                // Selected Avatar Bio-Scanner Style Preview
+                const Text(
+                  'CHOOSE PROFILE AVATAR',
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                     color: AppTheme.textColorSecondary,
+                    letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                
                 Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppTheme.cardColor,
-                      border: Border.all(color: AppTheme.borderLight, width: 2),
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.96, end: 1.04).animate(
+                      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
                     ),
-                    child: Text(
-                      _selectedAvatar,
-                      style: const TextStyle(fontSize: 60),
+                    child: Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.surfaceColor,
+                        border: Border.all(color: AppTheme.mintGreen.withOpacity(0.5), width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.mintGreen.withOpacity(0.15),
+                            blurRadius: 24,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        _selectedAvatar,
+                        style: const TextStyle(fontSize: 64),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
+                
+                // Horizontal Avatar Selection Row
                 SizedBox(
-                  height: 60,
+                  height: 64,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
                     itemCount: _avatars.length,
                     itemBuilder: (context, index) {
                       final avatar = _avatars[index];
                       final isSelected = avatar == _selectedAvatar;
-                      return GestureDetector(
+                      return AnimatedPress(
                         onTap: () {
                           setState(() {
                             _selectedAvatar = avatar;
                           });
                         },
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isSelected ? AppTheme.mintGreen.withOpacity(0.2) : AppTheme.cardColor,
+                            color: isSelected ? AppTheme.mintGreen.withOpacity(0.12) : AppTheme.surfaceColor,
                             border: Border.all(
                               color: isSelected ? AppTheme.mintGreen : AppTheme.borderLight,
-                              width: 2,
+                              width: isSelected ? 2.5 : 1.5,
                             ),
+                            boxShadow: isSelected ? [
+                              BoxShadow(
+                                color: AppTheme.mintGreen.withOpacity(0.3),
+                                blurRadius: 10,
+                                spreadRadius: 1,
+                              )
+                            ] : [],
                           ),
                           child: Text(
                             avatar,
-                            style: const TextStyle(fontSize: 20),
+                            style: const TextStyle(fontSize: 22),
                           ),
                         ),
                       );
@@ -145,64 +221,88 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
 
-                // Name input
-                Container(
+                // Name input with Dynamic Glow Focused Border
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   decoration: AppTheme.glassCardDecoration(
-                    color: AppTheme.cardColor.withOpacity(0.5),
+                    color: AppTheme.surfaceColor,
+                    borderRadius: 16,
+                    borderWidth: 1.5,
+                    borderColor: _isNameFocused ? AppTheme.mintGreen : AppTheme.borderLight,
                   ),
                   child: TextField(
                     controller: _nameController,
-                    style: const TextStyle(color: AppTheme.textColorPrimary),
+                    focusNode: _nameFocusNode,
+                    style: const TextStyle(
+                      color: AppTheme.textColorPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                     decoration: const InputDecoration(
                       labelText: 'Display Name',
-                      labelStyle: TextStyle(color: AppTheme.textColorSecondary),
-                      prefixIcon: Icon(Icons.person, color: AppTheme.textColorSecondary),
+                      labelStyle: TextStyle(color: AppTheme.textColorSecondary, fontWeight: FontWeight.bold),
+                      prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.textColorSecondary),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 48),
+                const SizedBox(height: 44),
 
-                // Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleGetStarted,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.mintGreen,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
+                // Generate Profile Secure Action Button
+                AnimatedPress(
+                  onTap: _isLoading ? () {} : _handleGetStarted,
+                  child: Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: _isLoading ? null : AppTheme.premiumGreenGradient,
+                      color: _isLoading ? AppTheme.cardColor : null,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: _isLoading ? [] : [
+                        BoxShadow(
+                          color: AppTheme.mintGreen.withOpacity(0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
+                    alignment: Alignment.center,
                     child: _isLoading
                         ? const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               SizedBox(
-                                width: 24,
-                                height: 24,
+                                width: 22,
+                                height: 22,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                  strokeWidth: 2.5,
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               ),
                               SizedBox(width: 12),
                               Text(
-                                'Generating Secure Keys...',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                'GENERATING SECURE KEYS...',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
+                                  color: Colors.white,
+                                ),
                               )
                             ],
                           )
                         : const Text(
-                            'Generate Profile & Pair',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            'GENERATE PROFILE & JOIN MESH',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),
