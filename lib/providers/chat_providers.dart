@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/storage_models.dart';
 import '../data/services/storage_service.dart';
@@ -91,6 +93,23 @@ class MessagesNotifier extends StateNotifier<List<MessageModel>> {
     final success = await _routing.sendMessage(recipientId, filePath, type, chatId: _chatId);
     loadMessages();
     return success;
+  }
+
+  Future<bool> sendVoiceMessage(String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) return false;
+      final bytes = await file.readAsBytes();
+      final base64String = base64Encode(bytes);
+
+      final recipientId = _chatId;
+      final success = await _routing.sendMessage(recipientId, base64String, 'audio', chatId: _chatId);
+      loadMessages();
+      return success;
+    } catch (e) {
+      print("Error sending voice message: $e");
+      return false;
+    }
   }
 
   Future<bool> sendLocationMessage(double lat, double lon, String address) async {

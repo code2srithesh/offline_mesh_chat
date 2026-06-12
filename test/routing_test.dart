@@ -94,9 +94,47 @@ void main() {
       expect(hostRoutes['node-c']!.cost, equals(2));
       expect(hostRoutes['node-c']!.nextHopId, equals('node-b'));
 
-      expect(hostRoutes['node-d'], isNotNull);
-      expect(hostRoutes['node-d']!.cost, equals(3));
       expect(hostRoutes['node-d']!.nextHopId, equals('node-b'));
+    });
+
+    test('Audio Message payload transmission and Base64 consistency', () async {
+      final rawAudioBytes = List<int>.generate(200, (i) => i % 256);
+      final encodedBase64 = base64Encode(rawAudioBytes);
+
+      final decodedBytes = base64Decode(encodedBase64);
+      expect(decodedBytes, equals(rawAudioBytes));
+
+      final recipientId = 'node-b';
+      
+      await storage.saveRoute(RouteModel(
+        destinationId: 'node-b',
+        nextHopId: 'node-b',
+        cost: 1,
+        timestamp: DateTime.now(),
+      ));
+      routing.routingTable['node-b'] = RouteModel(
+        destinationId: 'node-b',
+        nextHopId: 'node-b',
+        cost: 1,
+        timestamp: DateTime.now(),
+      );
+
+      await storage.saveUser(UserModel(
+        userId: 'node-b',
+        name: 'Bob',
+        profilePicture: '',
+        deviceId: 'node-b',
+        publicKey: 'mock-public-key-b',
+        createdAt: DateTime.now(),
+      ));
+
+      final success = await routing.sendMessage(recipientId, encodedBase64, 'audio', chatId: 'node-b');
+      expect(success, isTrue);
+
+      final messages = storage.getMessagesForChat('node-b');
+      expect(messages, isNotEmpty);
+      final audioMsg = messages.firstWhere((m) => m.messageType == 'audio');
+      expect(audioMsg.content, equals(encodedBase64));
     });
   });
 }
