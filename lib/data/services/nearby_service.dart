@@ -41,7 +41,11 @@ class NearbyService implements CommunicationService {
     print("NearbyService initialized.");
     if (!_isSupported) return;
 
-    final hasPerm = await checkPermissions();
+    bool hasPerm = await checkPermissions();
+    if (!hasPerm) {
+      hasPerm = await requestPermissions();
+    }
+
     if (hasPerm) {
       final myProfile = await StorageService().getMyProfile();
       final name = myProfile?.name ?? "Mesh Device";
@@ -65,6 +69,24 @@ class NearbyService implements CommunicationService {
         scanStatus.isGranted &&
         connectStatus.isGranted &&
         advertiseStatus.isGranted;
+  }
+
+  Future<bool> requestPermissions() async {
+    if (!_isSupported) return false;
+
+    final Map<Permission, PermissionStatus> statuses = await [
+      Permission.location,
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.bluetoothAdvertise,
+    ].request();
+
+    final locationGranted = statuses[Permission.location]?.isGranted ?? false;
+    final scanGranted = statuses[Permission.bluetoothScan]?.isGranted ?? true;
+    final connectGranted = statuses[Permission.bluetoothConnect]?.isGranted ?? true;
+    final advertiseGranted = statuses[Permission.bluetoothAdvertise]?.isGranted ?? true;
+
+    return locationGranted && scanGranted && connectGranted && advertiseGranted;
   }
 
   bool get _isSupported => !kIsWeb && Platform.isAndroid;
@@ -136,8 +158,11 @@ class NearbyService implements CommunicationService {
       return;
     }
 
+    final myProfile = await StorageService().getMyProfile();
+    final myId = myProfile?.userId ?? "host-device";
+
     // Encode name, deviceId, and short picture hash into advertisement name (max limit is 130 bytes)
-    final advName = "$name|android_device|${profilePictureBase64.substring(0, min(10, profilePictureBase64.length))}";
+    final advName = "$name|$myId|${profilePictureBase64.substring(0, min(10, profilePictureBase64.length))}";
 
     try {
       await Nearby().startAdvertising(
