@@ -94,6 +94,9 @@ class MessageModel {
   final String status; // 'pending', 'sent', 'delivered', 'read'
   final bool isEncrypted;
   final List<String> routePath; // Trace of deviceIds representing the message path
+  final String? replyToId;
+  final String? replyToContent;
+  final Map<String, String> reactions; // userId -> emoji
 
   MessageModel({
     required this.messageId,
@@ -106,6 +109,9 @@ class MessageModel {
     required this.status,
     this.isEncrypted = false,
     this.routePath = const [],
+    this.replyToId,
+    this.replyToContent,
+    this.reactions = const {},
   });
 
   Map<String, dynamic> toMap() {
@@ -120,6 +126,9 @@ class MessageModel {
       'status': status,
       'isEncrypted': isEncrypted,
       'routePath': routePath,
+      'replyToId': replyToId,
+      'replyToContent': replyToContent,
+      'reactions': reactions,
     };
   }
 
@@ -135,6 +144,9 @@ class MessageModel {
       status: map['status'] ?? 'pending',
       isEncrypted: map['isEncrypted'] ?? false,
       routePath: List<String>.from(map['routePath'] ?? []),
+      replyToId: map['replyToId'],
+      replyToContent: map['replyToContent'],
+      reactions: Map<String, String>.from(map['reactions'] ?? {}),
     );
   }
 
@@ -142,6 +154,9 @@ class MessageModel {
     String? status,
     List<String>? routePath,
     String? content,
+    String? replyToId,
+    String? replyToContent,
+    Map<String, String>? reactions,
   }) {
     return MessageModel(
       messageId: messageId,
@@ -154,6 +169,9 @@ class MessageModel {
       status: status ?? this.status,
       isEncrypted: isEncrypted,
       routePath: routePath ?? this.routePath,
+      replyToId: replyToId ?? this.replyToId,
+      replyToContent: replyToContent ?? this.replyToContent,
+      reactions: reactions ?? this.reactions,
     );
   }
 }

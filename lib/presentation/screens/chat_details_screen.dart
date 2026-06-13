@@ -6,11 +6,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
 import '../../data/models/storage_models.dart';
@@ -42,6 +44,9 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   bool _isRecording = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
+
+  MessageModel? _replyingToMessage;
+  final Map<String, String> _activeBursts = {};
 
   @override
   void initState() {
@@ -78,8 +83,16 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    ref.read(messagesProvider(widget.chatId).notifier).sendTextMessage(text);
+    ref.read(messagesProvider(widget.chatId).notifier).sendTextMessage(
+      text,
+      replyToId: _replyingToMessage?.messageId,
+      replyToContent: _replyingToMessage?.content,
+    );
+    
     _messageController.clear();
+    setState(() {
+      _replyingToMessage = null;
+    });
     _scrollToBottom();
   }
 
@@ -962,32 +975,38 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     final messages = ref.watch(messagesProvider(widget.chatId));
     final myProfile = ref.watch(profileProvider);
     final verifiedUsers = ref.watch(verifiedUsersProvider);
+    final palette = ThemeManager.currentTheme;
     
-    final isGroup = widget.chatId == 'emergency_sos' || 
+    final isGroup = widget.chatId == 'emergency_sos' || widget.chatId.startsWith('community_') || 
         (ref.read(storageServiceProvider).getChat(widget.chatId)?.type == 'group');
     final isVerified = verifiedUsers.contains(widget.chatId);
 
     _scrollToBottom();
 
     return Scaffold(
-      backgroundColor: AppTheme.obsidianBackground,
+      backgroundColor: palette.background,
       appBar: AppBar(
+        backgroundColor: palette.secondary.withOpacity(0.8),
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(widget.chatName),
+                Text(
+                  widget.chatName.replaceAll('COMMUNITY_', '').replaceAll('_', ' '),
+                  style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 18, color: palette.textPrimary),
+                ),
                 if (!isGroup && isVerified) ...[
                   const SizedBox(width: 6),
-                  Icon(Icons.verified, color: AppTheme.mintGreen, size: 16),
+                  Icon(Icons.verified, color: palette.success, size: 16),
                 ],
               ],
             ),
             Text(
-              "End-to-End Encrypted (AES-256)",
-              style: TextStyle(fontSize: 10, color: AppTheme.mintGreenLight),
+              isGroup ? "Mesh Channel Broadcast (Plaintext)" : "End-to-End Encrypted (AES-256)",
+              style: GoogleFonts.inter(fontSize: 10, color: isGroup ? palette.textSecondary : palette.success),
             ),
           ],
         ),
@@ -996,7 +1015,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             IconButton(
               icon: Icon(
                 isVerified ? Icons.shield : Icons.shield_outlined,
-                color: isVerified ? AppTheme.mintGreen : AppTheme.textColorSecondary,
+                color: isVerified ? palette.success : palette.textSecondary,
               ),
               onPressed: () => _showVerificationPanel(),
             ),
@@ -1009,20 +1028,22 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             decoration: AppTheme.glassCardDecoration(
-              color: const Color(0x1510B981),
+              color: isGroup ? palette.accent.withOpacity(0.06) : palette.success.withOpacity(0.06),
               borderRadius: 12,
-              borderColor: AppTheme.mintGreen.withOpacity(0.18),
+              borderColor: (isGroup ? palette.accent : palette.success).withOpacity(0.18),
               borderWidth: 1.0,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock_rounded, size: 14, color: AppTheme.mintGreenLight),
+                Icon(Icons.lock_rounded, size: 14, color: isGroup ? palette.accent : palette.success),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "End-to-End Encrypted (AES-256). Peer verified via handshake.",
-                    style: TextStyle(fontSize: 10, color: AppTheme.mintGreenLight, fontWeight: FontWeight.bold, letterSpacing: 0.1),
+                    isGroup 
+                        ? "Public beacon. Channel signals are flooded to nearby neighbors."
+                        : "End-to-End Encrypted (AES-256). Peer verified via handshake.",
+                    style: GoogleFonts.inter(fontSize: 10, color: isGroup ? palette.accent : palette.success, fontWeight: FontWeight.bold),
                   ),
                 )
               ],
@@ -1068,6 +1089,9 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             ),
           ),
 
+          // Reply preview bar
+          _buildReplyPreviewBar(palette),
+
           // Message input bar
           _buildInputBar(context),
         ],
@@ -1075,14 +1099,70 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     );
   }
 
+  Widget _buildReplyPreviewBar(ThemePalette palette) {
+    if (_replyingToMessage == null) return const SizedBox();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: palette.secondary.withOpacity(0.9),
+        border: Border(
+          top: BorderSide(color: palette.border.withOpacity(0.2)),
+          bottom: BorderSide(color: palette.border.withOpacity(0.2)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.reply_rounded, color: palette.accent, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Replying to Message',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: palette.accent,
+                  ),
+                ),
+                Text(
+                  _replyingToMessage!.content,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close_rounded, color: palette.textSecondary, size: 18),
+            onPressed: () {
+              setState(() {
+                _replyingToMessage = null;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputBar(BuildContext context) {
+    final palette = ThemeManager.currentTheme;
+
     if (_isRecording) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
+          color: palette.secondary,
           border: Border(
-            top: BorderSide(color: AppTheme.borderLight, width: 1),
+            top: BorderSide(color: palette.border.withOpacity(0.2), width: 1),
           ),
         ),
         child: SafeArea(
@@ -1094,26 +1174,25 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               const SizedBox(width: 12),
               Text(
                 _formatDuration(_recordingSeconds),
-                style: TextStyle(
-                  color: AppTheme.textColorPrimary,
-                  fontFamily: 'monospace',
+                style: GoogleFonts.spaceGrotesk(
+                  color: palette.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
               const Spacer(),
               TextButton.icon(
-                icon: Icon(Icons.cancel_outlined, color: AppTheme.crimsonRed, size: 20),
+                icon: Icon(Icons.cancel_outlined, color: palette.error, size: 20),
                 label: Text(
                   "Cancel",
-                  style: TextStyle(color: AppTheme.crimsonRed, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: palette.error, fontWeight: FontWeight.bold),
                 ),
                 onPressed: _cancelRecording,
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.mintGreen,
+                  backgroundColor: palette.accent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   shape: RoundedRectangleBorder(
@@ -1133,53 +1212,28 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     final hasFocus = _inputFocusNode.hasFocus;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppTheme.obsidianBackground,
-        border: Border(
-          top: BorderSide(color: AppTheme.borderLight, width: 1.5),
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: SafeArea(
         child: Row(
           children: [
-            AnimatedPress(
-              onTap: _showAttachmentSheet,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(Icons.add_circle_outline, color: AppTheme.mintGreen, size: 24),
-              ),
-            ),
             Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A1120),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: hasFocus ? AppTheme.mintGreen : AppTheme.borderLight,
-                    width: hasFocus ? 1.5 : 1.0,
-                  ),
-                  boxShadow: hasFocus ? [
-                    BoxShadow(
-                      color: AppTheme.mintGreen.withOpacity(0.12),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    )
-                  ] : [],
+              child: Container(
+                decoration: AppTheme.glassCardDecoration(
+                  color: palette.secondary.withOpacity(0.75),
+                  borderRadius: 24,
+                  borderColor: hasFocus ? palette.accent : palette.border.withOpacity(0.15),
+                  borderWidth: 1.2,
                 ),
                 child: Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 14, right: 2),
-                      child: Text(
-                        ">",
-                        style: TextStyle(
-                          color: AppTheme.mintGreen,
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                    AnimatedPress(
+                      onTap: _showAttachmentSheet,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: Icon(Icons.add_circle_outline, color: palette.accent, size: 24),
                       ),
                     ),
                     Expanded(
@@ -1187,21 +1241,19 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                         controller: _messageController,
                         focusNode: _inputFocusNode,
                         maxLines: null,
-                        style: TextStyle(
-                          color: AppTheme.textColorPrimary,
+                        style: GoogleFonts.inter(
+                          color: palette.textPrimary,
                           fontSize: 14,
-                          fontFamily: 'monospace',
                           fontWeight: FontWeight.w600,
                         ),
                         onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
                           hintText: "Write message...",
-                          hintStyle: TextStyle(
-                            color: AppTheme.textColorSecondary,
+                          hintStyle: GoogleFonts.inter(
+                            color: palette.textSecondary.withOpacity(0.5),
                             fontSize: 14,
-                            fontFamily: 'monospace',
                           ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
                           border: InputBorder.none,
                         ),
                       ),
@@ -1210,7 +1262,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _messageController,
               builder: (context, value, child) {
@@ -1218,19 +1270,27 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 return AnimatedPress(
                   onTap: isTextEmpty ? _startRecording : _sendMessage,
                   child: Container(
-                    width: 44,
-                    height: 44,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: isTextEmpty ? AppTheme.surfaceColor : AppTheme.mintGreen.withOpacity(0.15),
+                      gradient: isTextEmpty ? null : AppTheme.premiumBlueGradient,
+                      color: isTextEmpty ? palette.secondary : null,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isTextEmpty ? AppTheme.borderLight : AppTheme.mintGreen,
+                        color: isTextEmpty ? palette.border.withOpacity(0.2) : palette.accent.withOpacity(0.2),
                         width: 1.0,
                       ),
+                      boxShadow: isTextEmpty ? [] : [
+                        BoxShadow(
+                          color: palette.accent.withOpacity(0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        )
+                      ],
                     ),
                     child: Icon(
                       isTextEmpty ? Icons.mic : Icons.send,
-                      color: AppTheme.mintGreen,
+                      color: isTextEmpty ? palette.textSecondary : Colors.white,
                       size: 20,
                     ),
                   ),
@@ -1247,6 +1307,66 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     final minutes = totalSeconds ~/ 60;
     final seconds = totalSeconds % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  void _showReactionMenu(MessageModel message) {
+    final palette = ThemeManager.currentTheme;
+    final emojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.4),
+      builder: (context) {
+        return Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: AppTheme.glassCardDecoration(
+              color: palette.secondary.withOpacity(0.92),
+              borderRadius: 30,
+              borderColor: palette.accent.withOpacity(0.3),
+              borderWidth: 1.5,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: emojis.map((emoji) {
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.8, end: 1.0),
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutBack,
+                  builder: (context, scale, child) {
+                    return Transform.scale(
+                      scale: scale,
+                      child: child,
+                    );
+                  },
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      ref.read(routingServiceProvider).sendReaction(widget.chatId, message.messageId, emoji);
+                      _triggerEmojiBurst(message.messageId, emoji);
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _triggerEmojiBurst(String messageId, String emoji) {
+    setState(() {
+      _activeBursts[messageId] = emoji;
+    });
   }
 
   Widget _buildMessageBubble(MessageModel message, bool isMe) {
@@ -1266,29 +1386,32 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(4),
             ),
-            border: Border.all(color: palette.accentLight.withOpacity(0.3), width: 0.5),
+            border: Border.all(color: palette.accentLight.withOpacity(0.35), width: 0.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: palette.id == 'black' 
+                    ? Colors.white.withOpacity(0.1) 
+                    : palette.accent.withOpacity(0.35),
+                blurRadius: 12,
+                spreadRadius: 1,
+                offset: const Offset(0, 2),
               )
             ],
           )
         : BoxDecoration(
-            color: palette.card,
+            color: palette.card.withOpacity(0.75),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
               bottomLeft: Radius.circular(4),
               bottomRight: Radius.circular(20),
             ),
-            border: Border.all(color: palette.border.withOpacity(0.2), width: 0.5),
+            border: Border.all(color: palette.border.withOpacity(0.15), width: 0.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withOpacity(0.12),
                 blurRadius: 8,
-                offset: const Offset(0, 3),
+                offset: const Offset(0, 2),
               )
             ],
           );
@@ -1304,6 +1427,96 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             ? (palette.id == 'black' ? palette.accent : palette.success)
             : (palette.id == 'black' ? Colors.black45 : Colors.white54))
         : palette.textSecondary;
+
+    final replyHeader = (message.replyToId == null)
+        ? const SizedBox()
+        : Container(
+            margin: const EdgeInsets.only(bottom: 6.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+              border: Border(
+                left: BorderSide(
+                  color: isMe ? Colors.white70 : palette.accent,
+                  width: 3,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isMe ? 'You replied:' : 'Replied:',
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    color: isMe ? Colors.white60 : palette.textSecondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  message.replyToContent ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isMe ? Colors.white70 : palette.textSecondary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          );
+
+    final Map<String, int> reactionCounts = {};
+    message.reactions.forEach((userId, emoji) {
+      reactionCounts[emoji] = (reactionCounts[emoji] ?? 0) + 1;
+    });
+
+    final reactionsRow = message.reactions.isEmpty
+        ? const SizedBox()
+        : Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Wrap(
+              spacing: 4,
+              children: reactionCounts.entries.map((entry) {
+                final emoji = entry.key;
+                final count = entry.value;
+                return GestureDetector(
+                  onTap: () {
+                    ref.read(routingServiceProvider).sendReaction(widget.chatId, message.messageId, emoji);
+                    _triggerEmojiBurst(message.messageId, emoji);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: palette.secondary.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: palette.accent.withOpacity(0.2), width: 0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(emoji, style: const TextStyle(fontSize: 11)),
+                        if (count > 1) ...[
+                          const SizedBox(width: 2),
+                          Text(
+                            '$count',
+                            style: GoogleFonts.inter(
+                              color: palette.textPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -1327,45 +1540,89 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 ),
                 const SizedBox(width: 8),
               ],
-              GestureDetector(
-                onTap: () => _showMessageHopsInfo(message),
-                child: Container(
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-                  padding: const EdgeInsets.all(12),
-                  decoration: bubbleDecoration,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildMessageContent(message, isMe, bubbleTextColor, bubbleSecondaryTextColor),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            message.timestamp.toLocal().toString().substring(11, 16),
-                            style: TextStyle(fontSize: 10, color: bubbleSecondaryTextColor),
-                          ),
-                          const SizedBox(width: 6),
-                          if (isMe)
-                            Icon(
-                              message.status == 'read'
-                                  ? Icons.done_all_rounded
-                                  : message.status == 'sent'
-                                      ? Icons.done_rounded
-                                      : Icons.schedule_rounded,
-                              size: 14,
-                              color: ticksColor,
-                            ),
-                          const SizedBox(width: 6),
-                          Icon(Icons.hub_outlined, size: 12, color: bubbleSecondaryTextColor),
-                        ],
-                      )
-                    ],
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Dismissible(
+                    key: ValueKey('reply_${message.messageId}'),
+                    direction: DismissDirection.startToEnd,
+                    confirmDismiss: (direction) async {
+                      setState(() {
+                        _replyingToMessage = message;
+                      });
+                      Feedback.forLongPress(context);
+                      return false; // Snaps back
+                    },
+                    background: Container(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 20.0),
+                      child: Icon(
+                        Icons.reply_rounded,
+                        color: palette.accent,
+                        size: 24,
+                      ),
+                    ),
+                    child: GestureDetector(
+                      onLongPress: () {
+                        Feedback.forLongPress(context);
+                        _showReactionMenu(message);
+                      },
+                      onTap: () => _showMessageHopsInfo(message),
+                      child: Container(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                        padding: const EdgeInsets.all(12),
+                        decoration: bubbleDecoration,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            replyHeader,
+                            _buildMessageContent(message, isMe, bubbleTextColor, bubbleSecondaryTextColor),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  message.timestamp.toLocal().toString().substring(11, 16),
+                                  style: TextStyle(fontSize: 10, color: bubbleSecondaryTextColor),
+                                ),
+                                const SizedBox(width: 6),
+                                if (isMe)
+                                  Icon(
+                                    message.status == 'read'
+                                        ? Icons.done_all_rounded
+                                        : message.status == 'sent'
+                                            ? Icons.done_rounded
+                                            : Icons.schedule_rounded,
+                                    size: 14,
+                                    color: ticksColor,
+                                  ),
+                                const SizedBox(width: 6),
+                                Icon(Icons.hub_outlined, size: 12, color: bubbleSecondaryTextColor),
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  if (_activeBursts.containsKey(message.messageId))
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: _EmojiBurstAnimation(
+                          emoji: _activeBursts[message.messageId]!,
+                          onFinished: () {
+                            setState(() {
+                              _activeBursts.remove(message.messageId);
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
+          reactionsRow,
         ],
       ),
     );
@@ -1501,6 +1758,104 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
       );
     } else if (message.messageType == 'audio') {
       return VoiceMessageBubble(message: message, isMe: isMe);
+    } else if (message.messageType == 'sos') {
+      double lat = 12.9716;
+      double lon = 77.5946;
+      String sosText = message.content;
+      try {
+        final contentMap = json.decode(message.content) as Map<String, dynamic>;
+        sosText = contentMap['message'] ?? message.content;
+        lat = (contentMap['latitude'] as num?)?.toDouble() ?? 12.9716;
+        lon = (contentMap['longitude'] as num?)?.toDouble() ?? 77.5946;
+      } catch (_) {}
+
+      return GestureDetector(
+        onTap: () => _showFullMapViewer(context, lat, lon, "EMERGENCY SOS: $sosText"),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: palette.error.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: palette.error.withOpacity(0.35)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: palette.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "EMERGENCY BROADCAST",
+                      style: GoogleFonts.spaceGrotesk(
+                        color: palette.error,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              sosText,
+              style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderLight),
+                ),
+                child: AbsorbPointer(
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: LatLng(lat, lon),
+                      initialZoom: 14.0,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.none,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.offline.mesh.chat',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(lat, lon),
+                            width: 32,
+                            height: 32,
+                            child: Icon(
+                              Icons.location_on,
+                              color: palette.error,
+                              size: 28,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Coordinates: ${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}",
+              style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary),
+            ),
+          ],
+        ),
+      );
     }
     return Text(message.content);
   }
@@ -2049,6 +2404,40 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+
+      if (permission == LocationPermission.deniedForever) return;
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      if (mounted) {
+        setState(() {
+          _selectedLatLng = LatLng(position.latitude, position.longitude);
+          _selectedAddress = "Current Location";
+        });
+        _mapController.move(_selectedLatLng, 15.0);
+      }
+    } catch (e) {
+      print("Error fetching location: $e");
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
     
@@ -2557,4 +2946,84 @@ class _ReticleCornerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// --- EMOJI BURST PARTICLE ANIMATION ---
+class _EmojiBurstAnimation extends StatefulWidget {
+  final String emoji;
+  final VoidCallback onFinished;
+
+  const _EmojiBurstAnimation({required this.emoji, required this.onFinished});
+
+  @override
+  State<_EmojiBurstAnimation> createState() => _EmojiBurstAnimationState();
+}
+
+class _EmojiBurstAnimationState extends State<_EmojiBurstAnimation> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final List<Offset> _directions = [];
+  final List<double> _scales = [];
+  final Random _random = Random();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    // Generate random particle directions and scales
+    for (int i = 0; i < 6; i++) {
+      final angle = -pi / 6 - _random.nextDouble() * (2 * pi / 3); // semi-circle upward
+      final speed = 30.0 + _random.nextDouble() * 50.0;
+      _directions.add(Offset(cos(angle) * speed, sin(angle) * speed));
+      _scales.add(0.8 + _random.nextDouble() * 0.5);
+    }
+
+    _controller.forward().then((_) => widget.onFinished());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final progress = _controller.value;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: List.generate(_directions.length, (index) {
+            final dir = _directions[index];
+            final x = dir.dx * progress;
+            // Arc trajectory
+            final y = dir.dy * progress + (15.0 * progress * progress);
+            final scale = _scales[index] * (1.0 - progress * 0.4);
+            final opacity = (1.0 - progress).clamp(0.0, 1.0);
+
+            return Positioned(
+              // Position particles centered relative to bubble bounds
+              left: 40 + x,
+              bottom: 25 - y,
+              child: Opacity(
+                opacity: opacity,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Text(
+                    widget.emoji,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
 }

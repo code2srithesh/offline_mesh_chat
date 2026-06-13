@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import '../data/models/storage_models.dart';
 import '../data/services/storage_service.dart';
 import '../data/services/routing_service.dart';
@@ -81,21 +82,41 @@ class MessagesNotifier extends StateNotifier<List<MessageModel>> {
     state = _storage.getMessagesForChat(_chatId);
   }
 
-  Future<bool> sendTextMessage(String text) async {
+  Future<bool> sendTextMessage(String text, {String? replyToId, String? replyToContent}) async {
     final recipientId = _chatId; // For 1-to-1 chats, chatId is target userId.
-    final success = await _routing.sendMessage(recipientId, text, 'text', chatId: _chatId);
+    if (recipientId == 'emergency_sos') {
+      double lat = 12.9716;
+      double lon = 77.5946;
+      try {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          LocationPermission permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+            final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+            lat = position.latitude;
+            lon = position.longitude;
+          }
+        }
+      } catch (e) {
+        print("Error getting location for SOS: $e");
+      }
+      await _routing.broadcastEmergencySOS(text, lat, lon);
+      loadMessages();
+      return true;
+    }
+    final success = await _routing.sendMessage(recipientId, text, 'text', chatId: _chatId, replyToId: replyToId, replyToContent: replyToContent);
     loadMessages();
     return success;
   }
 
-  Future<bool> sendMediaMessage(String filePath, String type) async {
+  Future<bool> sendMediaMessage(String filePath, String type, {String? replyToId, String? replyToContent}) async {
     final recipientId = _chatId;
-    final success = await _routing.sendMessage(recipientId, filePath, type, chatId: _chatId);
+    final success = await _routing.sendMessage(recipientId, filePath, type, chatId: _chatId, replyToId: replyToId, replyToContent: replyToContent);
     loadMessages();
     return success;
   }
 
-  Future<bool> sendVoiceMessage(String localPath) async {
+  Future<bool> sendVoiceMessage(String localPath, {String? replyToId, String? replyToContent}) async {
     try {
       final file = File(localPath);
       if (!await file.exists()) return false;
@@ -103,7 +124,7 @@ class MessagesNotifier extends StateNotifier<List<MessageModel>> {
       final base64String = base64Encode(bytes);
 
       final recipientId = _chatId;
-      final success = await _routing.sendMessage(recipientId, base64String, 'audio', chatId: _chatId);
+      final success = await _routing.sendMessage(recipientId, base64String, 'audio', chatId: _chatId, replyToId: replyToId, replyToContent: replyToContent);
       loadMessages();
       return success;
     } catch (e) {

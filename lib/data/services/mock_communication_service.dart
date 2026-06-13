@@ -81,6 +81,7 @@ class MockCommunicationService implements CommunicationService {
   Future<void> init() async {
     if (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST')) {
       _startSimulationLoop();
+      updateSimulationState();
     }
     logSim("Simulation initialized.");
   }
@@ -161,65 +162,81 @@ class MockCommunicationService implements CommunicationService {
     return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
   }
 
+  void updateSimulationState() {
+    if (!hostOnline) {
+      final Map<String, PeerConnectionStatus> newStatuses = Map.from(_activeConnections);
+      newStatuses.forEach((key, val) {
+        if (val != PeerConnectionStatus.disconnected) {
+          newStatuses[key] = PeerConnectionStatus.disconnected;
+        }
+      });
+      _updateActiveConnections(newStatuses);
+      return;
+    }
+
+    final List<DiscoveredPeer> discovered = [];
+    final Map<String, PeerConnectionStatus> newStatuses = Map.from(_activeConnections);
+
+    for (var node in nodes) {
+      if (!node.isOnline) {
+        if (_activeConnections[node.deviceId] != PeerConnectionStatus.disconnected) {
+          newStatuses[node.deviceId] = PeerConnectionStatus.disconnected;
+          logSim("Peer ${node.name} went offline.");
+        }
+        continue;
+      }
+
+      final dist = _calculateDistance(hostX, hostY, node.x, node.y);
+      
+      if (dist <= 180) {
+        // In discovery range
+        discovered.add(DiscoveredPeer(
+          deviceId: node.deviceId,
+          name: node.name,
+          profilePicture: node.profilePicture,
+          connectionEndpoint: "sim_${node.deviceId}",
+        ));
+
+        // Auto connect if not connected/connecting
+        if (_activeConnections[node.deviceId] == null ||
+            _activeConnections[node.deviceId] == PeerConnectionStatus.disconnected) {
+          newStatuses[node.deviceId] = PeerConnectionStatus.connected;
+          logSim("Discovered & Auto-connected to ${node.name}");
+        }
+      } else {
+        // Out of range
+        if (_activeConnections[node.deviceId] != PeerConnectionStatus.disconnected) {
+          newStatuses[node.deviceId] = PeerConnectionStatus.disconnected;
+          logSim("Lost connection to ${node.name} (Out of range).");
+        }
+      }
+    }
+
+    // Update controllers
+    _discoveredPeersController.add(discovered);
+    _updateActiveConnections(newStatuses);
+
+    // Run virtual routing table exchange & updates among virtual nodes
+    exchangeVirtualRoutingTables();
+  }
+
+  void _updateActiveConnections(Map<String, PeerConnectionStatus> newStatuses) {
+    bool statusChanged = false;
+    newStatuses.forEach((key, val) {
+      if (_activeConnections[key] != val) {
+        _activeConnections[key] = val;
+        statusChanged = true;
+      }
+    });
+    if (statusChanged) {
+      _connectionStatusController.add(Map.from(_activeConnections));
+    }
+  }
+
   void _startSimulationLoop() {
     _simulationTimer?.cancel();
     _simulationTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!hostOnline) return;
-
-      final List<DiscoveredPeer> discovered = [];
-      final Map<String, PeerConnectionStatus> newStatuses = Map.from(_activeConnections);
-
-      for (var node in nodes) {
-        if (!node.isOnline) {
-          if (_activeConnections[node.deviceId] == PeerConnectionStatus.connected) {
-            newStatuses[node.deviceId] = PeerConnectionStatus.disconnected;
-            logSim("Peer ${node.name} went offline.");
-          }
-          continue;
-        }
-
-        final dist = _calculateDistance(hostX, hostY, node.x, node.y);
-        
-        if (dist <= 180) {
-          // In discovery range
-          discovered.add(DiscoveredPeer(
-            deviceId: node.deviceId,
-            name: node.name,
-            profilePicture: node.profilePicture,
-            connectionEndpoint: "sim_${node.deviceId}",
-          ));
-
-          // Auto connect if not connected/connecting
-          if (_activeConnections[node.deviceId] == null ||
-              _activeConnections[node.deviceId] == PeerConnectionStatus.disconnected) {
-            newStatuses[node.deviceId] = PeerConnectionStatus.connected;
-            logSim("Discovered & Auto-connected to ${node.name}");
-          }
-        } else {
-          // Out of range
-          if (_activeConnections[node.deviceId] == PeerConnectionStatus.connected) {
-            newStatuses[node.deviceId] = PeerConnectionStatus.disconnected;
-            logSim("Lost connection to ${node.name} (Out of range).");
-          }
-        }
-      }
-
-      // Update controllers
-      _discoveredPeersController.add(discovered);
-      
-      bool statusChanged = false;
-      newStatuses.forEach((key, val) {
-        if (_activeConnections[key] != val) {
-          _activeConnections[key] = val;
-          statusChanged = true;
-        }
-      });
-      if (statusChanged) {
-        _connectionStatusController.add(Map.from(_activeConnections));
-      }
-
-      // Run virtual routing table exchange & updates among virtual nodes
-      exchangeVirtualRoutingTables();
+      updateSimulationState();
     });
   }
 
@@ -489,7 +506,7 @@ class MockCommunicationService implements CommunicationService {
 
   void addSimulatedNode(SimulatedNode node) {
     nodes.add(node);
-    exchangeVirtualRoutingTables();
+    updateSimulationState();
     logSim("Created simulated node: ${node.name}");
   }
 
@@ -504,7 +521,8 @@ class MockCommunicationService implements CommunicationService {
         node.y = y;
       }
     }
-    exchangeVirtualRoutingTables();
+    updateSimulationState();
+    logSim("Updated position of $id to: ($x, $y)");
   }
 
   void toggleNodeStatus(String id, bool online) {
@@ -516,7 +534,7 @@ class MockCommunicationService implements CommunicationService {
         node.isOnline = online;
       }
     }
-    exchangeVirtualRoutingTables();
+    updateSimulationState();
     logSim("Toggled status of $id to: ${online ? 'online' : 'offline'}");
   }
 

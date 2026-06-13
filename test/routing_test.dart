@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:offline_mesh_chat/data/models/storage_models.dart';
+import 'package:offline_mesh_chat/data/services/communication_service.dart';
 import 'package:offline_mesh_chat/data/services/mock_communication_service.dart';
 import 'package:offline_mesh_chat/data/services/routing_service.dart';
 import 'package:offline_mesh_chat/data/services/storage_service.dart';
@@ -135,6 +136,31 @@ void main() {
       expect(messages, isNotEmpty);
       final audioMsg = messages.firstWhere((m) => m.messageType == 'audio');
       expect(audioMsg.content, equals(encodedBase64));
+    });
+
+    test('Next-Hop Disconnection blocks direct sending and queues message', () async {
+      final recipientId = 'node-b';
+      
+      // Setup stale route in routing service
+      routing.routingTable['node-b'] = RouteModel(
+        destinationId: 'node-b',
+        nextHopId: 'node-b',
+        cost: 1,
+        timestamp: DateTime.now(),
+      );
+
+      // Force connection status to disconnected in mock Comm service
+      mockComm.activeConnections['node-b'] = PeerConnectionStatus.disconnected;
+
+      final success = await routing.sendMessage(recipientId, "Hello disconnected Bob", 'text', chatId: 'node-b');
+      
+      // Sending should return false (blocked because next hop is disconnected)
+      expect(success, isFalse);
+
+      // Status in Hive should remain 'pending' (clock icon)
+      final messages = storage.getMessagesForChat('node-b');
+      expect(messages, isNotEmpty);
+      expect(messages.first.status, equals('pending'));
     });
   });
 }

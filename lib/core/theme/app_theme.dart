@@ -36,90 +36,58 @@ class ThemePalette {
 class ThemeManager {
   static const ThemePalette defaultCyber = ThemePalette(
     id: 'default',
-    name: 'Default Cyber',
-    background: Color(0xFF0B0F1A),
-    secondary: Color(0xFF111827),
-    card: Color(0xFF151B2E),
+    name: 'Aurora Night',
+    background: Color(0xFF050816),
+    secondary: Color(0xFF0D1326),
+    card: Color(0xFF131C33),
     accent: Color(0xFF6D5DFC),
-    accentLight: Color(0xFF8B7CFF),
-    success: Color(0xFF00D68F),
+    accentLight: Color(0xFF00D9FF),
+    success: Color(0xFF8A7FFF),
     warning: Color(0xFFFFB020),
     error: Color(0xFFFF5C5C),
     textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFB3B8C4),
+    textSecondary: Color(0xFFA8B0C5),
     border: Color(0x336D5DFC),
   );
 
   static const ThemePalette midnightPurple = ThemePalette(
     id: 'purple',
-    name: 'Midnight Purple',
-    background: Color(0xFF120E2E),
-    secondary: Color(0xFF1A153E),
-    card: Color(0xFF231D54),
-    accent: Color(0xFF9D4EDD),
-    accentLight: Color(0xFFC77DFF),
-    success: Color(0xFF00D68F),
+    name: 'Cyber Neon',
+    background: Color(0xFF00020A),
+    secondary: Color(0xFF050B1B),
+    card: Color(0xFF09122C),
+    accent: Color(0xFF00F0FF),
+    accentLight: Color(0xFFBD00FF),
+    success: Color(0xFF00FF87),
     warning: Color(0xFFFFB020),
     error: Color(0xFFFF5C5C),
     textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFC3C1E6),
-    border: Color(0x339D4EDD),
-  );
-
-  static const ThemePalette cyberBlue = ThemePalette(
-    id: 'blue',
-    name: 'Cyber Blue',
-    background: Color(0xFF07162C),
-    secondary: Color(0xFF0B2240),
-    card: Color(0xFF113158),
-    accent: Color(0xFF00B4D8),
-    accentLight: Color(0xFF90E0EF),
-    success: Color(0xFF00D68F),
-    warning: Color(0xFFFFB020),
-    error: Color(0xFFFF5C5C),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFA0C4E2),
-    border: Color(0x3300B4D8),
+    textSecondary: Color(0xFF8E9BB0),
+    border: Color(0x3300F0FF),
   );
 
   static const ThemePalette emeraldGreen = ThemePalette(
     id: 'green',
-    name: 'Emerald Green',
-    background: Color(0xFF051A15),
-    secondary: Color(0xFF092A22),
-    card: Color(0xFF0F3C31),
-    accent: Color(0xFF10B981),
-    accentLight: Color(0xFF34D399),
-    success: Color(0xFF00E676),
+    name: 'Midnight Emerald',
+    background: Color(0xFF020B0B),
+    secondary: Color(0xFF061514),
+    card: Color(0xFF0B211E),
+    accent: Color(0xFF00FF87),
+    accentLight: Color(0xFF60EFFF),
+    success: Color(0xFF00FF87),
     warning: Color(0xFFFFB020),
     error: Color(0xFFFF5C5C),
     textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFA3C2B9),
-    border: Color(0x3310B981),
-  );
-
-  static const ThemePalette sunsetOrange = ThemePalette(
-    id: 'orange',
-    name: 'Sunset Orange',
-    background: Color(0xFF1F0E0E),
-    secondary: Color(0xFF2E1616),
-    card: Color(0xFF412020),
-    accent: Color(0xFFFF7A00),
-    accentLight: Color(0xFFFF9F43),
-    success: Color(0xFF00D68F),
-    warning: Color(0xFFFFB020),
-    error: Color(0xFFFF5C5C),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFD2BCBC),
-    border: Color(0x33FF7A00),
+    textSecondary: Color(0xFF7FA69E),
+    border: Color(0x3300FF87),
   );
 
   static const ThemePalette roseGold = ThemePalette(
     id: 'rose',
-    name: 'Rose Gold',
-    background: Color(0xFF1C1215),
-    secondary: Color(0xFF2A1B20),
-    card: Color(0xFF3D272E),
+    name: 'Rose Gold Premium',
+    background: Color(0xFF1B1414),
+    secondary: Color(0xFF291E1E),
+    card: Color(0xFF3D2E2E),
     accent: Color(0xFFE29578),
     accentLight: Color(0xFFFFDDD2),
     success: Color(0xFF00D68F),
@@ -132,26 +100,24 @@ class ThemeManager {
 
   static const ThemePalette amoledBlack = ThemePalette(
     id: 'black',
-    name: 'AMOLED Black',
+    name: 'AMOLED Pure Black',
     background: Color(0xFF000000),
-    secondary: Color(0xFF0A0A0A),
+    secondary: Color(0xFF080808),
     card: Color(0xFF121212),
     accent: Color(0xFFFFFFFF),
-    accentLight: Color(0xFFE0E0E0),
+    accentLight: Color(0xFFB0B0B0),
     success: Color(0xFF00D68F),
     warning: Color(0xFFFFB020),
     error: Color(0xFFFF5C5C),
     textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFF9E9E9E),
+    textSecondary: Color(0xFF969696),
     border: Color(0x33FFFFFF),
   );
 
   static const Map<String, ThemePalette> themes = {
     'default': defaultCyber,
     'purple': midnightPurple,
-    'blue': cyberBlue,
     'green': emeraldGreen,
-    'orange': sunsetOrange,
     'rose': roseGold,
     'black': amoledBlack,
   };
@@ -269,10 +235,10 @@ class AppTheme {
         backgroundColor: palette.background,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
           letterSpacing: -0.5,
         ),
         iconTheme: IconThemeData(color: palette.textPrimary),
@@ -286,18 +252,40 @@ class AppTheme {
         ),
       ),
       textTheme: TextTheme(
-        headlineLarge: GoogleFonts.spaceGrotesk(
+        // Display (48px)
+        displayLarge: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
-          fontSize: 32,
+          fontSize: 48,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -1.0,
+        ),
+        // Hero (40px)
+        displayMedium: GoogleFonts.spaceGrotesk(
+          color: palette.textPrimary,
+          fontSize: 40,
+          fontWeight: FontWeight.bold,
+          letterSpacing: -0.8,
+        ),
+        // Title (28px)
+        titleLarge: GoogleFonts.spaceGrotesk(
+          color: palette.textPrimary,
+          fontSize: 28,
           fontWeight: FontWeight.bold,
           letterSpacing: -0.5,
         ),
-        headlineMedium: GoogleFonts.poppins(
+        // Section (22px)
+        titleMedium: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
           fontSize: 22,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.5,
+          fontWeight: FontWeight.bold,
         ),
+        // Subtitle (18px)
+        titleSmall: GoogleFonts.inter(
+          color: palette.textSecondary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+        // Body (15-16px)
         bodyLarge: GoogleFonts.inter(
           color: palette.textPrimary,
           fontSize: 16,
@@ -309,10 +297,12 @@ class AppTheme {
           fontSize: 14,
           height: 1.4,
         ),
+        // Caption (12-13px)
         labelLarge: GoogleFonts.inter(
-          color: palette.textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
+          color: palette.textSecondary.withOpacity(0.8),
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.5,
         ),
       ),
     );

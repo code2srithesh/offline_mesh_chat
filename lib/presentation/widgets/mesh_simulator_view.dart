@@ -75,6 +75,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
     
     final simLogs = ref.watch(simLogsProvider).value ?? '';
     final routingLogs = ref.watch(routingLogsProvider).value ?? '';
+    final palette = ThemeManager.currentTheme;
 
     _scrollToBottom();
 
@@ -159,7 +160,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                       // Grid background pattern
                       Positioned.fill(
                         child: CustomPaint(
-                          painter: GridPainter(),
+                          painter: GridPainter(palette: palette),
                         ),
                       ),
                       
@@ -175,6 +176,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                                 hostY: simNotifier.hostY,
                                 hostOnline: simNotifier.hostOnline,
                                 progress: _pulseController.value,
+                                palette: palette,
                               ),
                             );
                           },
@@ -199,6 +201,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                           onToggle: () {
                             simNotifier.toggleHost(!simNotifier.hostOnline);
                           },
+                          palette: palette,
                         ),
                       ),
 
@@ -222,6 +225,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                             onToggle: () {
                               simNotifier.toggleNode(node.deviceId, !node.isOnline);
                             },
+                            palette: palette,
                             onMessage: () => _openMockDirectChat(context, node),
                           ),
                         );
@@ -338,9 +342,10 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
     required bool isOnline,
     required Function(double, double) onDrag,
     required VoidCallback onToggle,
+    required ThemePalette palette,
     VoidCallback? onMessage,
   }) {
-    final themeColor = id == 'host-device' ? AppTheme.mintGreen : AppTheme.electricBlue;
+    final themeColor = id == 'host-device' ? palette.success : palette.accent;
     return GestureDetector(
       onPanUpdate: (details) {
         onDrag(details.delta.dx, details.delta.dy);
@@ -374,9 +379,9 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                 height: 48,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.surfaceColor,
+                  color: palette.secondary,
                   border: Border.all(
-                    color: isOnline ? themeColor : AppTheme.textColorSecondary.withOpacity(0.4),
+                    color: isOnline ? themeColor : palette.textSecondary.withOpacity(0.4),
                     width: 2.0,
                   ),
                 ),
@@ -396,8 +401,8 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                   height: 13,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isOnline ? AppTheme.mintGreen : AppTheme.crimsonRed,
-                    border: Border.all(color: AppTheme.obsidianBackground, width: 2),
+                    color: isOnline ? palette.success : palette.error,
+                    border: Border.all(color: palette.background, width: 2),
                   ),
                 ),
               ),
@@ -547,23 +552,71 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
 
 // --- Background Grid Lines Painter ---
 class GridPainter extends CustomPainter {
+  final ThemePalette palette;
+
+  GridPainter({required this.palette});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppTheme.borderLight.withOpacity(0.12)
-      ..strokeWidth = 1.0;
+    final finePaint = Paint()
+      ..color = palette.accent.withOpacity(0.05)
+      ..strokeWidth = 0.5;
 
-    const double step = 25.0;
+    final majorPaint = Paint()
+      ..color = palette.accent.withOpacity(0.12)
+      ..strokeWidth = 1.2;
+
+    const double step = 20.0;
+    const double majorStep = 100.0;
+
+    // Draw fine grid lines
     for (double i = 0; i < size.width; i += step) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+      if (i % majorStep != 0) {
+        canvas.drawLine(Offset(i, 0), Offset(i, size.height), finePaint);
+      }
     }
     for (double i = 0; i < size.height; i += step) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+      if (i % majorStep != 0) {
+        canvas.drawLine(Offset(0, i), Offset(size.width, i), finePaint);
+      }
+    }
+
+    // Draw major grid lines
+    for (double i = 0; i < size.width; i += majorStep) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), majorPaint);
+    }
+    for (double i = 0; i < size.height; i += majorStep) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), majorPaint);
+    }
+
+    // Draw blueprint coordinates text
+    final textStyle = TextStyle(
+      color: palette.accent.withOpacity(0.35),
+      fontSize: 8,
+      fontFamily: 'monospace',
+    );
+
+    for (double i = 100; i < size.width; i += majorStep) {
+      final textSpan = TextSpan(text: '${i.toInt()}m', style: textStyle);
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, Offset(i + 4, 4));
+    }
+
+    for (double i = 100; i < size.height; i += majorStep) {
+      final textSpan = TextSpan(text: '${i.toInt()}m', style: textStyle);
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, Offset(4, i + 4));
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant GridPainter oldDelegate) => false;
 }
 
 // --- Topology Link Painter (Marching Dots Animation) ---
@@ -573,6 +626,7 @@ class TopologyPainter extends CustomPainter {
   final double hostY;
   final bool hostOnline;
   final double progress; // 0.0 to 1.0 driving packet/ripple movement
+  final ThemePalette palette;
 
   TopologyPainter({
     required this.nodes,
@@ -580,6 +634,7 @@ class TopologyPainter extends CustomPainter {
     required this.hostY,
     required this.hostOnline,
     required this.progress,
+    required this.palette,
   });
 
   double _distance(double x1, double y1, double x2, double y2) {
@@ -589,12 +644,12 @@ class TopologyPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paintLine = Paint()
-      ..color = AppTheme.electricBlue.withOpacity(0.2)
+      ..color = palette.accent.withOpacity(0.25)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final paintDot = Paint()
-      ..color = AppTheme.electricBlueLight
+      ..color = palette.accentLight
       ..style = PaintingStyle.fill;
 
     const double range = 180.0;
@@ -604,7 +659,7 @@ class TopologyPainter extends CustomPainter {
     if (hostOnline) {
       final double rippleRadius = (progress * range);
       final paintRipple = Paint()
-        ..color = AppTheme.mintGreen.withOpacity((1.0 - progress).clamp(0.0, 1.0) * 0.12)
+        ..color = palette.success.withOpacity((1.0 - progress).clamp(0.0, 1.0) * 0.15)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
       canvas.drawCircle(Offset(hostX, hostY), rippleRadius, paintRipple);
@@ -614,7 +669,7 @@ class TopologyPainter extends CustomPainter {
       if (!node.isOnline) continue;
       final double rippleRadius = (progress * range);
       final paintRipple = Paint()
-        ..color = AppTheme.electricBlue.withOpacity((1.0 - progress).clamp(0.0, 1.0) * 0.1)
+        ..color = palette.accent.withOpacity((1.0 - progress).clamp(0.0, 1.0) * 0.12)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
       canvas.drawCircle(Offset(node.x, node.y), rippleRadius, paintRipple);
@@ -626,18 +681,29 @@ class TopologyPainter extends CustomPainter {
         if (!node.isOnline) continue;
         final distSq = _distance(hostX, hostY, node.x, node.y);
         if (distSq <= rangeSquare) {
+          // Glow effect under line
+          final paintLineGlow = Paint()
+            ..color = palette.accent.withOpacity(0.08)
+            ..strokeWidth = 3.5
+            ..style = PaintingStyle.stroke;
+          canvas.drawLine(Offset(hostX, hostY), Offset(node.x, node.y), paintLineGlow);
+
           canvas.drawLine(Offset(hostX, hostY), Offset(node.x, node.y), paintLine);
           
           // Marching packet dots along paths
-          final double length = double.parse(distSq.toString());
-          final double actualDist = double.parse(length.toString()); 
-          // Re-calculate math vector
           final double dx = node.x - hostX;
           final double dy = node.y - hostY;
           final int dotCount = 4;
           for (int k = 0; k < dotCount; k++) {
             final double fraction = ((k / dotCount) + progress) % 1.0;
-            canvas.drawCircle(Offset(hostX + dx * fraction, hostY + dy * fraction), 3.0, paintDot);
+            final dotPos = Offset(hostX + dx * fraction, hostY + dy * fraction);
+            
+            // Draw glowing halo around marching dot
+            final glowPaint = Paint()
+              ..color = palette.accentLight.withOpacity(0.3)
+              ..style = PaintingStyle.fill;
+            canvas.drawCircle(dotPos, 6.0, glowPaint);
+            canvas.drawCircle(dotPos, 3.0, paintDot);
           }
         }
       }
@@ -654,6 +720,13 @@ class TopologyPainter extends CustomPainter {
 
         final distSq = _distance(n1.x, n1.y, n2.x, n2.y);
         if (distSq <= rangeSquare) {
+          // Glow effect under line
+          final paintLineGlow = Paint()
+            ..color = palette.accent.withOpacity(0.08)
+            ..strokeWidth = 3.5
+            ..style = PaintingStyle.stroke;
+          canvas.drawLine(Offset(n1.x, n1.y), Offset(n2.x, n2.y), paintLineGlow);
+
           canvas.drawLine(Offset(n1.x, n1.y), Offset(n2.x, n2.y), paintLine);
 
           // Marching packets
@@ -662,7 +735,14 @@ class TopologyPainter extends CustomPainter {
           final int dotCount = 4;
           for (int k = 0; k < dotCount; k++) {
             final double fraction = ((k / dotCount) + progress) % 1.0;
-            canvas.drawCircle(Offset(n1.x + dx * fraction, n1.y + dy * fraction), 3.0, paintDot);
+            final dotPos = Offset(n1.x + dx * fraction, n1.y + dy * fraction);
+
+            // Draw glowing halo around marching dot
+            final glowPaint = Paint()
+              ..color = palette.accentLight.withOpacity(0.3)
+              ..style = PaintingStyle.fill;
+            canvas.drawCircle(dotPos, 6.0, glowPaint);
+            canvas.drawCircle(dotPos, 3.0, paintDot);
           }
         }
       }

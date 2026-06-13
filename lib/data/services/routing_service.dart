@@ -29,6 +29,9 @@ class RoutingService {
   // Local store-and-forward queue in memory (could also be backed by Hive)
   final List<MessageModel> _storeAndForwardQueue = [];
 
+  // Generic packet queue for store-and-forward (e.g. ACKs and forwarded packets)
+  final List<Map<String, dynamic>> _packetQueue = [];
+
   // Message stream to notify UI about new messages received
   final StreamController<MessageModel> _receivedMessageController = StreamController<MessageModel>.broadcast();
   Stream<MessageModel> get receivedMessageStream => _receivedMessageController.stream;
@@ -83,7 +86,11 @@ class RoutingService {
 
   // --- Sending Messages via Mesh ---
 
-  Future<bool> sendMessage(String recipientId, String content, String messageType, {String chatId = ''}) async {
+  Future<bool> sendMessage(String recipientId, String content, String messageType, {
+    String chatId = '',
+    String? replyToId,
+    String? replyToContent,
+  }) async {
     final myProfile = await _storage.getMyProfile();
     if (myProfile == null) return false;
 
@@ -115,21 +122,70 @@ class RoutingService {
       status: 'pending',
       isEncrypted: isEnc,
       routePath: [myProfile.userId],
+      replyToId: replyToId,
+      replyToContent: replyToContent,
     );
 
     // Save message locally in Hive
     await _storage.saveMessage(message);
 
+    // Check if group/community broadcast
+    final chat = _storage.getChat(actualChatId);
+    final isGroup = actualChatId == 'emergency_sos' || actualChatId.startsWith('community_') || (chat != null && chat.type == 'group');
+
+    if (isGroup) {
+      final packet = {
+        'payloadType': 'group_message',
+        'messageId': msgId,
+        'chatId': actualChatId,
+        'senderId': myProfile.userId,
+        'messageType': messageType,
+        'content': content,
+        'timestamp': message.timestamp.toIso8601String(),
+        'hops': [myProfile.userId],
+        'replyToId': replyToId,
+        'replyToContent': replyToContent,
+      };
+
+      final payloadString = json.encode(packet);
+      final connections = _commService.activeConnections;
+      bool sentAny = false;
+
+      connections.forEach((peerId, status) {
+        if (status == PeerConnectionStatus.connected) {
+          _commService.sendPayload(peerId, payloadString);
+          sentAny = true;
+        }
+      });
+
+      final updated = message.copyWith(status: sentAny ? 'sent' : 'pending', routePath: [myProfile.userId]);
+      await _storage.saveMessage(updated);
+      _messageStatusController.add(updated);
+
+      if (!sentAny) {
+        logRoute("No neighbors online for group $actualChatId. Queued in store-and-forward.");
+        _storeAndForwardQueue.add(updated);
+      } else {
+        logRoute("Broadcasted group message $msgId for $actualChatId to neighbors.");
+      }
+      return sentAny;
+    }
+
     // Look up Next Hop
     final route = _routingTable[recipientId];
     if (route != null) {
-      final success = await _deliverPacket(route.nextHopId, message);
-      if (success) {
-        final updated = message.copyWith(status: 'sent', routePath: [myProfile.userId, route.nextHopId]);
-        await _storage.saveMessage(updated);
-        _messageStatusController.add(updated); // Emit update to trigger tick change
-        logRoute("Sent message $msgId -> Next Hop: ${route.nextHopId}");
-        return true;
+      final isNextHopConnected = _commService.activeConnections[route.nextHopId] == PeerConnectionStatus.connected;
+      if (isNextHopConnected) {
+        final success = await _deliverPacket(route.nextHopId, message);
+        if (success) {
+          final updated = message.copyWith(status: 'sent', routePath: [myProfile.userId, route.nextHopId]);
+          await _storage.saveMessage(updated);
+          _messageStatusController.add(updated); // Emit update to trigger tick change
+          logRoute("Sent message $msgId -> Next Hop: ${route.nextHopId}");
+          return true;
+        }
+      } else {
+        logRoute("Next Hop ${route.nextHopId} for destination $recipientId is currently disconnected.");
       }
     }
 
@@ -151,6 +207,8 @@ class RoutingService {
       'timestamp': message.timestamp.toIso8601String(),
       'isEncrypted': message.isEncrypted,
       'hops': message.routePath,
+      'replyToId': message.replyToId,
+      'replyToContent': message.replyToContent,
     };
     
     final payloadString = json.encode(packet);
@@ -220,6 +278,12 @@ class RoutingService {
         _handleIncomingMeshMessage(payload.senderDeviceId, packet);
       } else if (type == 'sos_broadcast') {
         _handleIncomingSOS(payload.senderDeviceId, packet);
+      } else if (type == 'mesh_ack') {
+        _handleIncomingMeshAck(payload.senderDeviceId, packet);
+      } else if (type == 'group_message') {
+        _handleIncomingGroupMessage(payload.senderDeviceId, packet);
+      } else if (type == 'mesh_reaction') {
+        _handleIncomingMeshReaction(payload.senderDeviceId, packet);
       }
     } catch (e) {
       logRoute("Error parsing incoming payload from ${payload.senderDeviceId}: $e");
@@ -228,9 +292,9 @@ class RoutingService {
 
   void _handleRoutingAnnouncement(String senderId, Map<String, dynamic> neighborTable) {
     bool tableChanged = false;
+    final now = DateTime.now();
 
     // First update the direct link to the sender with cost 1
-    final now = DateTime.now();
     if (!_routingTable.containsKey(senderId) || _routingTable[senderId]!.cost > 1) {
       final route = RouteModel(
         destinationId: senderId,
@@ -244,27 +308,81 @@ class RoutingService {
       logRoute("Updated direct route to neighbor $senderId");
     }
 
+    // Identify destinations that currently next-hop through this neighbor
+    final routedViaSender = _routingTable.entries
+        .where((entry) => entry.value.nextHopId == senderId && entry.key != senderId)
+        .map((entry) => entry.key)
+        .toList();
+
+    // If the neighbor no longer advertises a route to those destinations, we must drop them
+    for (var destId in routedViaSender) {
+      if (!neighborTable.containsKey(destId)) {
+        _routingTable.remove(destId);
+        _storage.removeRoute(destId);
+        tableChanged = true;
+        logRoute("Route to $destId via $senderId lost (neighbor removed it)");
+      }
+    }
+
     // Now inspect neighbor's advertisements
     neighborTable.forEach((destId, routeData) {
       // Don't route back to ourselves
       final myId = _storage.getMyUserId();
       if (destId == myId) return;
 
-      final cost = (routeData['cost'] as int) + 1;
+      final neighborCost = routeData['cost'] as int;
+      final cost = neighborCost + 1;
       final currentRoute = _routingTable[destId];
 
-      if (currentRoute == null || cost < currentRoute.cost) {
-        // Found a shorter route!
-        final route = RouteModel(
-          destinationId: destId,
-          nextHopId: senderId, // Next hop is the neighbor who advertised it
-          cost: cost,
-          timestamp: now,
-        );
-        _routingTable[destId] = route;
-        _storage.saveRoute(route);
-        tableChanged = true;
-        logRoute("Found shorter route to $destId via $senderId (cost: $cost)");
+      if (currentRoute == null) {
+        if (cost < 999) {
+          // New route found
+          final route = RouteModel(
+            destinationId: destId,
+            nextHopId: senderId,
+            cost: cost,
+            timestamp: now,
+          );
+          _routingTable[destId] = route;
+          _storage.saveRoute(route);
+          tableChanged = true;
+          logRoute("Found route to $destId via $senderId (cost: $cost)");
+        }
+      } else {
+        if (currentRoute.nextHopId == senderId) {
+          // If the next hop changed their cost, we must accept it (even if higher)
+          if (cost >= 999) {
+            _routingTable.remove(destId);
+            _storage.removeRoute(destId);
+            tableChanged = true;
+            logRoute("Route to $destId via $senderId became unreachable");
+          } else if (currentRoute.cost != cost) {
+            final route = RouteModel(
+              destinationId: destId,
+              nextHopId: senderId,
+              cost: cost,
+              timestamp: now,
+            );
+            _routingTable[destId] = route;
+            _storage.saveRoute(route);
+            tableChanged = true;
+            logRoute("Updated cost to $destId via $senderId from ${currentRoute.cost} to $cost");
+          }
+        } else {
+          // If advertisement comes from a different next hop, only update if it is shorter
+          if (cost < currentRoute.cost && cost < 999) {
+            final route = RouteModel(
+              destinationId: destId,
+              nextHopId: senderId,
+              cost: cost,
+              timestamp: now,
+            );
+            _routingTable[destId] = route;
+            _storage.saveRoute(route);
+            tableChanged = true;
+            logRoute("Found shorter route to $destId via $senderId (cost: $cost, old cost: ${currentRoute.cost})");
+          }
+        }
       }
     });
 
@@ -319,6 +437,8 @@ class RoutingService {
         status: 'read',
         isEncrypted: packet['isEncrypted'],
         routePath: hops,
+        replyToId: packet['replyToId'],
+        replyToContent: packet['replyToContent'],
       );
 
       // Save message locally
@@ -351,6 +471,9 @@ class RoutingService {
 
       // Emit message to UI listeners
       _receivedMessageController.add(message);
+
+      // Send E2E Acknowledgment back to sender
+      _sendMeshAck(message.senderId, msgId);
     } else {
       // Forward to next hop
       logRoute("Message $msgId is for $receiverId. Relay message...");
@@ -371,6 +494,244 @@ class RoutingService {
         logRoute("No route to $receiverId. Message $msgId queued in store-and-forward.");
         final message = MessageModel.fromMap(packet);
         _storeAndForwardQueue.add(message);
+      }
+    }
+  }
+
+  Future<void> _sendMeshAck(String originalSenderId, String messageId) async {
+    final myProfile = await _storage.getMyProfile();
+    if (myProfile == null) return;
+
+    final ackPacket = {
+      'payloadType': 'mesh_ack',
+      'messageId': messageId,
+      'senderId': myProfile.userId,
+      'receiverId': originalSenderId,
+      'hops': [myProfile.userId],
+    };
+
+    final route = _routingTable[originalSenderId];
+    if (route != null) {
+      final payloadString = json.encode(ackPacket);
+      final success = await _commService.sendPayload(route.nextHopId, payloadString);
+      if (success) {
+        logRoute("Sent ACK for message $messageId -> Next Hop: ${route.nextHopId}");
+        return;
+      }
+    }
+    logRoute("Destination $originalSenderId unreachable for ACK. Queued ACK in store-and-forward.");
+    _packetQueue.add(ackPacket);
+  }
+
+  Future<void> _handleIncomingMeshAck(String senderId, Map<String, dynamic> packet) async {
+    final myProfile = await _storage.getMyProfile();
+    if (myProfile == null) return;
+
+    final msgId = packet['messageId'] as String? ?? '';
+    final receiverId = packet['receiverId'] as String? ?? '';
+    if (msgId.isEmpty || receiverId.isEmpty) return;
+
+    final hops = List<String>.from(packet['hops'] ?? []);
+    if (hops.contains(myProfile.userId)) return;
+    hops.add(myProfile.userId);
+    packet['hops'] = hops;
+
+    if (receiverId == myProfile.userId) {
+      logRoute("🎉 Received E2E ACK for message $msgId!");
+      final existingMsg = _storage.getMessage(msgId);
+      if (existingMsg != null) {
+        final updated = existingMsg.copyWith(status: 'read');
+        await _storage.saveMessage(updated);
+        _messageStatusController.add(updated);
+      }
+    } else {
+      // Forward ACK to next hop
+      logRoute("ACK $msgId is for $receiverId. Relay ACK...");
+      final nextRoute = _routingTable[receiverId];
+      if (nextRoute != null) {
+        final payloadString = json.encode(packet);
+        final success = await _commService.sendPayload(nextRoute.nextHopId, payloadString);
+        if (success) {
+          logRoute("ACK $msgId relayed successfully to ${nextRoute.nextHopId}");
+        } else {
+          logRoute("Failed to relay ACK $msgId. Queueing in packet queue.");
+          _packetQueue.add(packet);
+        }
+      } else {
+        logRoute("No route to $receiverId for ACK. Queueing in packet queue.");
+        _packetQueue.add(packet);
+      }
+    }
+  }
+
+  Future<void> _handleIncomingGroupMessage(String senderId, Map<String, dynamic> packet) async {
+    final myProfile = await _storage.getMyProfile();
+    if (myProfile == null) return;
+
+    final msgId = packet['messageId'] as String? ?? '';
+    final chatId = packet['chatId'] as String? ?? '';
+    if (msgId.isEmpty || chatId.isEmpty) return;
+
+    final hops = List<String>.from(packet['hops'] ?? []);
+    if (_storage.getMessage(msgId) != null || hops.contains(myProfile.userId)) {
+      return; // Already handled or loop
+    }
+
+    logRoute("👥 Incoming Group message received for $chatId from ${packet['senderId']}");
+    hops.add(myProfile.userId);
+    packet['hops'] = hops;
+
+    final message = MessageModel(
+      messageId: msgId,
+      chatId: chatId,
+      senderId: packet['senderId'],
+      receiverId: '', // Group
+      messageType: packet['messageType'],
+      content: packet['content'],
+      timestamp: DateTime.parse(packet['timestamp']),
+      status: 'read',
+      isEncrypted: false,
+      routePath: hops,
+    );
+
+    // Save locally
+    await _storage.saveMessage(message);
+
+    // Create Chat session if not exists
+    if (_storage.getChat(chatId) == null) {
+      final chat = ChatModel(
+        chatId: chatId,
+        name: chatId.replaceAll('community_', '').replaceAll('_', ' ').toUpperCase(),
+        type: 'group',
+        members: [myProfile.userId],
+        createdAt: DateTime.now(),
+      );
+      await _storage.saveChat(chat);
+    }
+
+    _receivedMessageController.add(message);
+
+    // Flood to all neighbors except those in hops list
+    final connections = _commService.activeConnections;
+    connections.forEach((peerId, status) {
+      if (status == PeerConnectionStatus.connected && !hops.contains(peerId)) {
+        logRoute("Re-flooding group message $msgId to neighbor $peerId");
+        final payloadString = json.encode(packet);
+        _commService.sendPayload(peerId, payloadString);
+      }
+    });
+  }
+
+  Future<void> sendReaction(String chatId, String messageId, String emoji) async {
+    final myProfile = await _storage.getMyProfile();
+    if (myProfile == null) return;
+
+    // Save locally
+    final msg = _storage.getMessage(messageId);
+    if (msg != null) {
+      final updatedReactions = Map<String, String>.from(msg.reactions);
+      updatedReactions[myProfile.userId] = emoji;
+      final updatedMsg = msg.copyWith(reactions: updatedReactions);
+      await _storage.saveMessage(updatedMsg);
+      _messageStatusController.add(updatedMsg);
+    }
+
+    // Determine receiverId and broadcast/forward
+    final chat = _storage.getChat(chatId);
+    final isGroup = chatId == 'emergency_sos' || chatId.startsWith('community_') || (chat != null && chat.type == 'group');
+
+    final packet = {
+      'payloadType': 'mesh_reaction',
+      'messageId': messageId,
+      'chatId': chatId,
+      'senderId': myProfile.userId,
+      'receiverId': isGroup ? '' : chatId, // For 1-to-1, receiverId is chatId
+      'emoji': emoji,
+      'hops': [myProfile.userId],
+    };
+
+    final payloadString = json.encode(packet);
+
+    if (isGroup) {
+      // Flood group reaction
+      final connections = _commService.activeConnections;
+      connections.forEach((peerId, status) {
+        if (status == PeerConnectionStatus.connected) {
+          _commService.sendPayload(peerId, payloadString);
+        }
+      });
+      logRoute("Broadcasted reaction for message $messageId in group $chatId");
+    } else {
+      // Route 1-to-1 reaction
+      final route = _routingTable[chatId];
+      if (route != null) {
+        final success = await _commService.sendPayload(route.nextHopId, payloadString);
+        if (success) {
+          logRoute("Sent reaction for message $messageId to next hop ${route.nextHopId}");
+        } else {
+          _packetQueue.add(packet);
+        }
+      } else {
+        _packetQueue.add(packet);
+      }
+    }
+  }
+
+  Future<void> _handleIncomingMeshReaction(String senderId, Map<String, dynamic> packet) async {
+    final myProfile = await _storage.getMyProfile();
+    if (myProfile == null) return;
+
+    final msgId = packet['messageId'] as String? ?? '';
+    final chatId = packet['chatId'] as String? ?? '';
+    final senderUserId = packet['senderId'] as String? ?? '';
+    final receiverId = packet['receiverId'] as String? ?? '';
+    final emoji = packet['emoji'] as String? ?? '';
+    if (msgId.isEmpty || chatId.isEmpty || senderUserId.isEmpty || emoji.isEmpty) return;
+
+    final hops = List<String>.from(packet['hops'] ?? []);
+    if (hops.contains(myProfile.userId)) return;
+    hops.add(myProfile.userId);
+    packet['hops'] = hops;
+
+    final isGroup = chatId == 'emergency_sos' || chatId.startsWith('community_') || receiverId.isEmpty;
+
+    // Update local message reactions if message exists in our database
+    final existingMsg = _storage.getMessage(msgId);
+    if (existingMsg != null) {
+      final updatedReactions = Map<String, String>.from(existingMsg.reactions);
+      updatedReactions[senderUserId] = emoji;
+      final updatedMsg = existingMsg.copyWith(reactions: updatedReactions);
+      await _storage.saveMessage(updatedMsg);
+      _messageStatusController.add(updatedMsg);
+      logRoute("Applied incoming reaction ($emoji) from $senderUserId to message $msgId");
+    }
+
+    if (isGroup) {
+      // Re-flood group reaction to neighbors who haven't seen it
+      final connections = _commService.activeConnections;
+      connections.forEach((peerId, status) {
+        if (status == PeerConnectionStatus.connected && !hops.contains(peerId)) {
+          final payloadString = json.encode(packet);
+          _commService.sendPayload(peerId, payloadString);
+        }
+      });
+    } else {
+      if (receiverId == myProfile.userId) {
+        // Destination reached
+        logRoute("Reaction successfully delivered to me.");
+      } else {
+        // Forward reaction packet to next hop
+        logRoute("Relaying reaction for message $msgId to $receiverId...");
+        final nextRoute = _routingTable[receiverId];
+        if (nextRoute != null) {
+          final payloadString = json.encode(packet);
+          final success = await _commService.sendPayload(nextRoute.nextHopId, payloadString);
+          if (!success) {
+            _packetQueue.add(packet);
+          }
+        } else {
+          _packetQueue.add(packet);
+        }
       }
     }
   }
@@ -470,29 +831,68 @@ class RoutingService {
   // --- Store and Forward Processing ---
 
   void _processStoreAndForwardQueue() async {
-    if (_storeAndForwardQueue.isEmpty) return;
+    final myProfile = await _storage.getMyProfile();
+    final myId = myProfile?.userId;
 
-    final List<MessageModel> queueCopy = List.from(_storeAndForwardQueue);
-    _storeAndForwardQueue.clear();
+    // Process outgoing/relayed messages
+    if (_storeAndForwardQueue.isNotEmpty) {
+      final List<MessageModel> queueCopy = List.from(_storeAndForwardQueue);
+      _storeAndForwardQueue.clear();
 
-    for (var msg in queueCopy) {
-      final dest = msg.receiverId;
-      final route = _routingTable[dest];
-      
-      if (route != null) {
-        logRoute("Flushing store-and-forward message ${msg.messageId} to $dest via next hop ${route.nextHopId}");
-        final success = await _deliverPacket(route.nextHopId, msg);
-        if (success) {
-          final updated = msg.copyWith(status: 'sent', routePath: [...msg.routePath, route.nextHopId]);
-          await _storage.saveMessage(updated);
-          _messageStatusController.add(updated); // Emit update to trigger tick change
+      for (var msg in queueCopy) {
+        final dest = msg.receiverId;
+        final route = _routingTable[dest];
+        
+        if (route != null) {
+          final isNextHopConnected = _commService.activeConnections[route.nextHopId] == PeerConnectionStatus.connected;
+          if (isNextHopConnected) {
+            logRoute("Flushing store-and-forward message ${msg.messageId} to $dest via next hop ${route.nextHopId}");
+            final success = await _deliverPacket(route.nextHopId, msg);
+            if (success) {
+              if (msg.senderId == myId) {
+                final updated = msg.copyWith(status: 'sent', routePath: [...msg.routePath, route.nextHopId]);
+                await _storage.saveMessage(updated);
+                _messageStatusController.add(updated); // Emit update to trigger tick change
+              }
+            } else {
+              // Re-queue
+              _storeAndForwardQueue.add(msg);
+            }
+          } else {
+            // Keep in queue (next hop currently disconnected)
+            _storeAndForwardQueue.add(msg);
+          }
         } else {
-          // Re-queue
+          // Keep in queue (no route)
           _storeAndForwardQueue.add(msg);
         }
-      } else {
-        // Keep in queue
-        _storeAndForwardQueue.add(msg);
+      }
+    }
+
+    // Process raw packet queue (ACKs or general forward payloads)
+    if (_packetQueue.isNotEmpty) {
+      final List<Map<String, dynamic>> packetQueueCopy = List.from(_packetQueue);
+      _packetQueue.clear();
+
+      for (var packet in packetQueueCopy) {
+        final dest = packet['receiverId'] as String? ?? '';
+        final route = _routingTable[dest];
+
+        if (route != null) {
+          final isNextHopConnected = _commService.activeConnections[route.nextHopId] == PeerConnectionStatus.connected;
+          if (isNextHopConnected) {
+            logRoute("Flushing queued packet to $dest via next hop ${route.nextHopId}");
+            final payloadString = json.encode(packet);
+            final success = await _commService.sendPayload(route.nextHopId, payloadString);
+            if (!success) {
+              _packetQueue.add(packet);
+            }
+          } else {
+            _packetQueue.add(packet);
+          }
+        } else {
+          _packetQueue.add(packet);
+        }
       }
     }
   }

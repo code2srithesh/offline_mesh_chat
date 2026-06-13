@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
+import '../../data/models/storage_models.dart';
 import '../../core/theme/app_theme.dart';
 import 'chat_details_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/mesh_simulator_view.dart';
+import '../widgets/ambient_background.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +24,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   final List<String> _titles = [
     "Secure Chats",
-    "Discover Mesh",
+    "Mesh Channels",
+    "Discover Beacons",
     "Terminal Settings"
   ];
 
@@ -42,59 +45,104 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final List<Widget> tabs = [
       const _ChatsTab(),
+      const _CommunitiesTab(),
       const _DiscoverTab(),
       const _ProfileTab(),
     ];
 
     return Scaffold(
       backgroundColor: palette.background,
+      extendBody: true,
       appBar: AppBar(
-        backgroundColor: palette.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: false,
         title: Text(
           _titles[_currentIndex],
           style: GoogleFonts.spaceGrotesk(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            fontSize: 24,
             color: palette.textPrimary,
+            letterSpacing: -0.5,
           ),
         ),
         actions: const [
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: IndexedStack(
-                index: _currentIndex,
-                children: tabs,
-              ),
-            ),
-            _buildBottomNavBar(palette),
-          ],
+      body: AmbientBackground(
+        child: SafeArea(
+          bottom: false,
+          child: IndexedStack(
+            index: _currentIndex,
+            children: tabs,
+          ),
         ),
       ),
+      bottomNavigationBar: _buildBottomNavBar(palette),
     );
   }
 
   Widget _buildBottomNavBar(ThemePalette palette) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      height: 68,
-      decoration: AppTheme.glassCardDecoration(
-        color: palette.secondary.withOpacity(0.85),
-        borderRadius: 34,
-        borderWidth: 1.5,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(0, Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats', palette),
-          _buildNavItem(1, Icons.radar_outlined, Icons.radar_rounded, 'Discover', palette),
-          _buildNavItem(2, Icons.terminal_outlined, Icons.terminal_rounded, 'Settings', palette),
-        ],
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        height: 68,
+        decoration: AppTheme.glassCardDecoration(
+          color: palette.secondary.withOpacity(0.85),
+          borderRadius: 34,
+          borderWidth: 1.5,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double itemWidth = constraints.maxWidth / 4;
+            return Stack(
+              children: [
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.fastOutSlowIn,
+                  left: _currentIndex * itemWidth + 8,
+                  width: itemWidth - 16,
+                  top: 8,
+                  bottom: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(26),
+                      gradient: LinearGradient(
+                        colors: [
+                          palette.accent.withOpacity(0.16),
+                          palette.accent.withOpacity(0.04),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(
+                        color: palette.accent.withOpacity(0.35),
+                        width: 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: palette.accent.withOpacity(0.1),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(child: _buildNavItem(0, Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats', palette)),
+                    Expanded(child: _buildNavItem(1, Icons.group_outlined, Icons.group_rounded, 'Channels', palette)),
+                    Expanded(child: _buildNavItem(2, Icons.radar_outlined, Icons.radar_rounded, 'Discover', palette)),
+                    Expanded(child: _buildNavItem(3, Icons.terminal_outlined, Icons.terminal_rounded, 'Settings', palette)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -107,13 +155,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _currentIndex = index;
         });
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: isSelected ? palette.accent.withOpacity(0.12) : Colors.transparent,
-        ),
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -133,6 +175,296 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// --- COMMUNITIES/CHANNELS TAB ---
+class _CommunitiesTab extends ConsumerStatefulWidget {
+  const _CommunitiesTab();
+
+  @override
+  ConsumerState<_CommunitiesTab> createState() => _CommunitiesTabState();
+}
+
+class _CommunitiesTabState extends ConsumerState<_CommunitiesTab> {
+  final List<Map<String, dynamic>> _predefinedCommunities = [
+    {
+      'id': 'emergency_sos',
+      'name': '🚨 EMERGENCY SOS BROADCAST',
+      'desc': 'Floods localized emergency coordinates to all devices. Keep channels open.',
+      'tag': '#emergency',
+      'icon': '🚨',
+      'category': 'BROADCAST',
+      'online': 14,
+      'members': 412,
+      'avatars': ['🦁', '🦖', '🐼', '🤖'],
+    },
+    {
+      'id': 'community_lounge',
+      'name': '💬 LOCAL LOUNGE',
+      'desc': 'Casual public frequency for nearby users. Drop a hi to discover who is around.',
+      'tag': '#general',
+      'icon': '💬',
+      'category': 'PUBLIC DISCUSSION',
+      'online': 28,
+      'members': 621,
+      'avatars': ['🚀', '🦊', '👾', '🐼'],
+    },
+    {
+      'id': 'community_tech',
+      'name': '🛠️ TECH & SIGNAL DIAGNOSTICS',
+      'desc': 'Frequencies for debugging routes, discussing hardware setups, and network traces.',
+      'tag': '#dev',
+      'icon': '🛠️',
+      'category': 'MESH DEV',
+      'online': 9,
+      'members': 148,
+      'avatars': ['🤖', '🛰️', '🛸', '⚡'],
+    },
+    {
+      'id': 'community_marketplace',
+      'name': '🛒 OFFLINE CLASSIFIEDS',
+      'desc': 'Decentralized neighborhood directory to post trades, items, or services offline.',
+      'tag': '#market',
+      'icon': '🛒',
+      'category': 'TRADE',
+      'online': 5,
+      'members': 97,
+      'avatars': ['🦊', '🔮', '🦄', '🦁'],
+    },
+  ];
+
+  void _openCommunityChat(String chatId, String chatName) async {
+    final storage = ref.read(storageServiceProvider);
+    final myProfile = ref.read(profileProvider);
+    if (storage.getChat(chatId) == null) {
+      final chat = ChatModel(
+        chatId: chatId,
+        name: chatName,
+        type: 'group',
+        members: [myProfile?.userId ?? 'host-device'],
+        createdAt: DateTime.now(),
+      );
+      await storage.saveChat(chat);
+    }
+
+    if (mounted) {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => ChatDetailsScreen(chatId: chatId, chatName: chatName),
+          transitionsBuilder: (_, animation, __, child) {
+            return SlideTransition(
+              position: Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+              ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+    }
+  }
+
+  Widget _buildAvatarPile(List<String> avatars, ThemePalette palette) {
+    return SizedBox(
+      width: 76,
+      height: 24,
+      child: Stack(
+        children: List.generate(avatars.length, (index) {
+          return Positioned(
+            left: index * 16.0,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: palette.secondary,
+                border: Border.all(color: palette.background, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                  )
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                avatars[index],
+                style: const TextStyle(fontSize: 11),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ThemeManager.currentTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          Text(
+            'DECENTRALIZED FREQUENCIES',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: palette.textSecondary,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: ListView.builder(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 90),
+              itemCount: _predefinedCommunities.length,
+              itemBuilder: (context, index) {
+                final com = _predefinedCommunities[index];
+                final isSos = com['id'] == 'emergency_sos';
+
+                return AnimatedPress(
+                  onTap: () => _openCommunityChat(com['id']!, com['name']!),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: AppTheme.glassCardDecoration(
+                      color: isSos 
+                          ? palette.error.withOpacity(0.06) 
+                          : palette.secondary.withOpacity(0.65),
+                      borderRadius: 20,
+                      borderColor: isSos 
+                          ? palette.error.withOpacity(0.35) 
+                          : palette.border.withOpacity(0.15),
+                      borderWidth: isSos ? 1.5 : 1.0,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Stack(
+                        children: [
+                          if (isSos)
+                            Positioned(
+                              top: -20,
+                              right: -20,
+                              child: Icon(
+                                Icons.error_outline_rounded,
+                                size: 100,
+                                color: palette.error.withOpacity(0.04),
+                              ),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(18.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: (isSos ? palette.error : palette.accent).withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        com['category']!,
+                                        style: GoogleFonts.spaceGrotesk(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: isSos ? palette.error : palette.accent,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      com['tag']!,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: palette.textSecondary.withOpacity(0.6),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Text(
+                                      com['icon']!,
+                                      style: const TextStyle(fontSize: 22),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        com['name']!,
+                                        style: GoogleFonts.spaceGrotesk(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSos ? palette.error : palette.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  com['desc']!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    color: palette.textSecondary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    _buildAvatarPile(List<String>.from(com['avatars']), palette),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: isSos ? palette.error : palette.success,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "${com['online']} ONLINE  /  ${com['members']} PEERS",
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: isSos ? palette.error : palette.success,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      size: 12,
+                                      color: palette.textSecondary.withOpacity(0.8),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -181,6 +513,7 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
                 ? _buildEmptyState(palette)
                 : ListView.builder(
                     physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 90),
                     itemCount: filteredList.length,
                     itemBuilder: (context, index) {
                       final chat = filteredList[index];
@@ -481,6 +814,7 @@ class _DiscoverTab extends ConsumerWidget {
 
                 return ListView.builder(
                   physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 90),
                   itemCount: peers.length,
                   itemBuilder: (context, index) {
                     final peer = peers[index];
@@ -539,7 +873,7 @@ class _ProfileTab extends ConsumerWidget {
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
