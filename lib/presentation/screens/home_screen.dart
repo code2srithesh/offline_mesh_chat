@@ -715,6 +715,61 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
 class _DiscoverTab extends ConsumerWidget {
   const _DiscoverTab();
 
+  void _connectAndOpenChat(BuildContext context, WidgetRef ref, DiscoveredPeer peer) async {
+    final commService = ref.read(communicationServiceProvider);
+    final storage = ref.read(storageServiceProvider);
+    final profile = ref.read(profileProvider);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Establishing secure handshake with ${peer.name}...'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    // 1. Initiate connection
+    await commService.connectToPeer(peer);
+
+    // 2. Save peer user details to storage
+    if (storage.getUser(peer.deviceId) == null) {
+      final mockUser = UserModel(
+        userId: peer.deviceId,
+        name: peer.name,
+        profilePicture: peer.profilePicture,
+        deviceId: peer.deviceId,
+        publicKey: "mock_public_key_for_${peer.deviceId}",
+        createdAt: DateTime.now(),
+      );
+      await storage.saveUser(mockUser);
+    }
+
+    // 3. Create chat session
+    await ref.read(chatsProvider.notifier).createChat(
+      peer.name,
+      'individual',
+      [profile!.userId, peer.deviceId],
+      customId: peer.deviceId,
+    );
+
+    // 4. Open chat screen
+    if (context.mounted) {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => ChatDetailsScreen(chatId: peer.deviceId, chatName: peer.name),
+          transitionsBuilder: (_, animation, __, child) {
+            return SlideTransition(
+              position: Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+              ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final discoveredPeers = ref.watch(discoveredPeersProvider);
@@ -839,12 +894,7 @@ class _DiscoverTab extends ConsumerWidget {
                           style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
                         ),
                         trailing: Icon(Icons.link_rounded, color: palette.accent),
-                        onTap: () {
-                          // Start pairing
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Establishing security handshake with ${peer.name}...')),
-                          );
-                        },
+                        onTap: () => _connectAndOpenChat(context, ref, peer),
                       ),
                     );
                   },
