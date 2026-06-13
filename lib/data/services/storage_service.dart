@@ -3,7 +3,9 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 import '../models/storage_models.dart';
+import '../../core/security/encryption_service.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -44,17 +46,44 @@ class StorageService {
     _routingBox = await Hive.openBox('routing');
 
     _initialized = true;
+
+    // Auto-create local user profile on first init to bypass onboarding
+    final myId = _settingsBox.get('my_user_id');
+    if (myId == null || getUser(myId as String) == null) {
+      final deviceId = const Uuid().v4();
+      final keyPair = EncryptionService().generateKeyPair();
+      final newUser = UserModel(
+        userId: deviceId,
+        name: "User_${deviceId.substring(0, 4)}",
+        profilePicture: "🚀",
+        deviceId: deviceId,
+        publicKey: keyPair['publicKey']!,
+        createdAt: DateTime.now(),
+      );
+      await _settingsBox.put('my_user_id', deviceId);
+      await _usersBox.put(deviceId, newUser.toMap());
+      await _settingsBox.put('my_private_key', keyPair['privateKey']!);
+    }
   }
 
   // --- Profile Settings ---
   
-  String? getMyUserId() => _settingsBox.get('my_user_id');
-  Future<void> setMyUserId(String userId) async => await _settingsBox.put('my_user_id', userId);
+  String? getMyUserId() => _initialized ? _settingsBox.get('my_user_id') : null;
+  Future<void> setMyUserId(String userId) async {
+    if (_initialized) await _settingsBox.put('my_user_id', userId);
+  }
 
-  bool isUserVerified(String userId) => _settingsBox.get('verified_$userId', defaultValue: false) as bool;
-  Future<void> setUserVerification(String userId, bool verified) async => await _settingsBox.put('verified_$userId', verified);
+  String getThemeId() => _initialized ? (_settingsBox.get('theme_id', defaultValue: 'default') as String) : 'default';
+  Future<void> setThemeId(String themeId) async {
+    if (_initialized) await _settingsBox.put('theme_id', themeId);
+  }
 
-  String? getPrivateKey() => _settingsBox.get('my_private_key');
+  bool isUserVerified(String userId) => _initialized ? (_settingsBox.get('verified_$userId', defaultValue: false) as bool) : false;
+  Future<void> setUserVerification(String userId, bool verified) async {
+    if (_initialized) await _settingsBox.put('verified_$userId', verified);
+  }
+
+  String? getPrivateKey() => _initialized ? _settingsBox.get('my_private_key') : null;
   Future<void> savePrivateKey(String privateKey) async => await _settingsBox.put('my_private_key', privateKey);
 
   Future<UserModel?> getMyProfile() async {
@@ -75,12 +104,14 @@ class StorageService {
   }
 
   UserModel? getUser(String userId) {
+    if (!_initialized) return null;
     final data = _usersBox.get(userId);
     if (data == null) return null;
     return UserModel.fromMap(Map<String, dynamic>.from(data));
   }
 
   List<UserModel> getAllUsers() {
+    if (!_initialized) return [];
     return _usersBox.values
         .map((data) => UserModel.fromMap(Map<String, dynamic>.from(data)))
         .toList();
@@ -89,10 +120,11 @@ class StorageService {
   // --- Chats CRUD ---
 
   Future<void> saveChat(ChatModel chat) async {
-    await _chatsBox.put(chat.chatId, chat.toMap());
+    if (_initialized) await _chatsBox.put(chat.chatId, chat.toMap());
   }
 
   List<ChatModel> getAllChats() {
+    if (!_initialized) return [];
     final chats = _chatsBox.values
         .map((data) => ChatModel.fromMap(Map<String, dynamic>.from(data)))
         .toList();

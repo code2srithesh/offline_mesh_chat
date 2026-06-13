@@ -137,7 +137,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.textColorPrimary),
+                        icon: Icon(Icons.arrow_back_ios_new, color: AppTheme.textColorPrimary),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const SizedBox(width: 8),
@@ -145,7 +145,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "TACTICAL RADAR MAP",
                               style: TextStyle(
                                 fontSize: 10,
@@ -156,7 +156,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                             ),
                             Text(
                               address,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: AppTheme.textColorPrimary,
@@ -170,7 +170,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                   ),
                 ),
               ),
-              const Divider(color: AppTheme.borderLight, height: 1),
+              Divider(color: AppTheme.borderLight, height: 1),
               
               // Full Screen Map
               Expanded(
@@ -192,7 +192,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                               point: LatLng(lat, lon),
                               width: 80,
                               height: 80,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.location_on,
                                 color: AppTheme.crimsonRed,
                                 size: 46,
@@ -224,7 +224,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               // Bottom tactical coordinates card
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppTheme.surfaceColor,
                   border: Border(
                     top: BorderSide(color: AppTheme.borderLight, width: 1),
@@ -235,7 +235,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "COORDINATE DATUM (WGS-84)",
                         style: TextStyle(
                           fontSize: 10,
@@ -251,10 +251,10 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("LATITUDE", style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
+                              Text("LATITUDE", style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
                               Text(
                                 lat.toStringAsFixed(6),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'monospace',
@@ -266,10 +266,10 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("LONGITUDE", style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
+                              Text("LONGITUDE", style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary)),
                               Text(
                                 lon.toStringAsFixed(6),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'monospace',
@@ -288,10 +288,10 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppTheme.borderLight),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Icon(Icons.wifi_off_rounded, color: AppTheme.mintGreen, size: 20),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 "Peer-to-Peer local mesh coordinates transfer complete. Map tile caches might be unavailable without internet connection.",
@@ -332,7 +332,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             final double screenHeight = MediaQuery.of(context).size.height;
             return Container(
               height: screenHeight * 0.82,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppTheme.obsidianBackground,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(24),
@@ -362,8 +362,8 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                           const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Row(
+                             children: [
+                              Row(
                                 children: [
                                   Icon(Icons.shield_outlined, color: AppTheme.mintGreen),
                                   SizedBox(width: 8),
@@ -378,7 +378,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                 ],
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close, color: AppTheme.textColorSecondary),
+                                icon: Icon(Icons.close, color: AppTheme.textColorSecondary),
                                 onPressed: () => Navigator.of(context).pop(),
                               ),
                             ],
@@ -416,10 +416,10 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                   decoration: AppTheme.glassCardDecoration(
                                     color: AppTheme.surfaceColor.withOpacity(0.5),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     children: [
                                       Icon(Icons.lock, color: AppTheme.electricBlue, size: 36),
-                                      SizedBox(width: 16),
+                                      const SizedBox(width: 16),
                                       Expanded(
                                         child: Text(
                                           "To verify end-to-end security, compare the unique code below with the code on their screen. If they match, this chat session is 100% verified.",
@@ -432,7 +432,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                 const SizedBox(height: 24),
                                 
                                 // Own Fingerprint
-                                const Text(
+                                Text(
                                   "YOUR IDENTITY FINGERPRINT",
                                   style: TextStyle(
                                     fontSize: 10,
@@ -452,7 +452,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                   ),
                                   child: Text(
                                     myFingerprint,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'monospace',
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
@@ -467,7 +467,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                 // Peer Fingerprint
                                 Text(
                                   "${widget.chatName.toUpperCase()}'S FINGERPRINT",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: AppTheme.textColorSecondary,
@@ -485,7 +485,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                   ),
                                   child: Text(
                                     peerFingerprint,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'monospace',
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
@@ -567,7 +567,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                             if (context.mounted) {
                                               Navigator.of(context).pop(); // Close sheet
                                               ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
+                                                SnackBar(
                                                   content: Text(
                                                     "Handshake complete! Secure identity verified via QR Scan.",
                                                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -595,7 +595,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                         padding: const EdgeInsets.all(20.0),
                                         child: Column(
                                           children: [
-                                            const Text(
+                                            Text(
                                               "YOUR SECURE HANDSHAKE CODE",
                                               style: TextStyle(
                                                 fontSize: 10,
@@ -635,7 +635,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                               ),
                                             ),
                                             const SizedBox(height: 16),
-                                            const Text(
+                                            Text(
                                               "Have the other peer scan this QR code with their device, or tap below to scan their code.",
                                               style: TextStyle(fontSize: 12, color: AppTheme.textColorSecondary),
                                               textAlign: TextAlign.center,
@@ -716,7 +716,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              const Text(
+              Text(
                 "BIOMETRIC MESH SCANNER",
                 style: TextStyle(
                   fontSize: 11,
@@ -782,12 +782,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                           },
                         ),
                         
-                        const Center(
+                        Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.qr_code_rounded, size: 72, color: Colors.white24),
-                              SizedBox(height: 12),
+                              const Icon(Icons.qr_code_rounded, size: 72, color: Colors.white24),
+                              const SizedBox(height: 12),
                               Text(
                                 "Align QR code inside framework",
                                 style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 12),
@@ -840,7 +840,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: onCancel,
-                child: const Text(
+                child: Text(
                   "Abort Scanning",
                   style: TextStyle(
                     color: AppTheme.textColorSecondary,
@@ -870,8 +870,8 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Microphone permission is required to record voice notes."),
+        SnackBar(
+          content: const Text("Microphone permission is required to record voice notes."),
           backgroundColor: AppTheme.crimsonRed,
         ),
       );
@@ -914,7 +914,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   "Attach File (Simulated Offline Transfer)",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -951,7 +951,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: AppTheme.textColorSecondary, fontSize: 12)),
+          Text(label, style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 12)),
         ],
       ),
     );
@@ -981,11 +981,11 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 Text(widget.chatName),
                 if (!isGroup && isVerified) ...[
                   const SizedBox(width: 6),
-                  const Icon(Icons.verified, color: AppTheme.mintGreen, size: 16),
+                  Icon(Icons.verified, color: AppTheme.mintGreen, size: 16),
                 ],
               ],
             ),
-            const Text(
+            Text(
               "End-to-End Encrypted (AES-256)",
               style: TextStyle(fontSize: 10, color: AppTheme.mintGreenLight),
             ),
@@ -1014,11 +1014,11 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               borderColor: AppTheme.mintGreen.withOpacity(0.18),
               borderWidth: 1.0,
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.lock_rounded, size: 14, color: AppTheme.mintGreenLight),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     "End-to-End Encrypted (AES-256). Peer verified via handshake.",
@@ -1079,7 +1079,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     if (_isRecording) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTheme.surfaceColor,
           border: Border(
             top: BorderSide(color: AppTheme.borderLight, width: 1),
@@ -1094,7 +1094,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               const SizedBox(width: 12),
               Text(
                 _formatDuration(_recordingSeconds),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.textColorPrimary,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.bold,
@@ -1103,8 +1103,8 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               ),
               const Spacer(),
               TextButton.icon(
-                icon: const Icon(Icons.cancel_outlined, color: AppTheme.crimsonRed, size: 20),
-                label: const Text(
+                icon: Icon(Icons.cancel_outlined, color: AppTheme.crimsonRed, size: 20),
+                label: Text(
                   "Cancel",
                   style: TextStyle(color: AppTheme.crimsonRed, fontWeight: FontWeight.bold),
                 ),
@@ -1134,7 +1134,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppTheme.obsidianBackground,
         border: Border(
           top: BorderSide(color: AppTheme.borderLight, width: 1.5),
@@ -1145,8 +1145,8 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
           children: [
             AnimatedPress(
               onTap: _showAttachmentSheet,
-              child: const Padding(
-                padding: EdgeInsets.all(8.0),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
                 child: Icon(Icons.add_circle_outline, color: AppTheme.mintGreen, size: 24),
               ),
             ),
@@ -1170,8 +1170,8 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.only(left: 14, right: 2),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 2),
                       child: Text(
                         ">",
                         style: TextStyle(
@@ -1187,14 +1187,14 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                         controller: _messageController,
                         focusNode: _inputFocusNode,
                         maxLines: null,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.textColorPrimary,
                           fontSize: 14,
                           fontFamily: 'monospace',
                           fontWeight: FontWeight.w600,
                         ),
                         onSubmitted: (_) => _sendMessage(),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: "Write message...",
                           hintStyle: TextStyle(
                             color: AppTheme.textColorSecondary,
@@ -1251,10 +1251,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
 
   Widget _buildMessageBubble(MessageModel message, bool isMe) {
     final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final palette = ThemeManager.currentTheme;
+
     final bubbleDecoration = isMe
         ? BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0F5244), Color(0xFF0C4237)],
+            gradient: LinearGradient(
+              colors: [palette.accent, palette.accentLight],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1264,32 +1266,44 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(4),
             ),
-            border: Border.all(color: AppTheme.mintGreen.withOpacity(0.2), width: 0.5),
+            border: Border.all(color: palette.accentLight.withOpacity(0.3), width: 0.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               )
             ],
           )
         : BoxDecoration(
-            color: AppTheme.surfaceColor,
+            color: palette.card,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
               bottomLeft: Radius.circular(4),
               bottomRight: Radius.circular(20),
             ),
-            border: Border.all(color: AppTheme.borderLight, width: 0.5),
+            border: Border.all(color: palette.border.withOpacity(0.2), width: 0.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.15),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               )
             ],
           );
+
+    final bubbleTextColor = isMe
+        ? (palette.id == 'black' ? Colors.black : Colors.white)
+        : palette.textPrimary;
+    final bubbleSecondaryTextColor = isMe
+        ? (palette.id == 'black' ? Colors.black54 : Colors.white70)
+        : palette.textSecondary;
+    final ticksColor = isMe
+        ? (message.status == 'read'
+            ? (palette.id == 'black' ? palette.accent : palette.success)
+            : (palette.id == 'black' ? Colors.black45 : Colors.white54))
+        : palette.textSecondary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -1306,8 +1320,8 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.cardColor,
-                    border: Border.all(color: AppTheme.borderLight, width: 1.0),
+                    color: palette.secondary,
+                    border: Border.all(color: palette.border.withOpacity(0.3), width: 1.0),
                   ),
                   child: const Text("👤", style: TextStyle(fontSize: 14)),
                 ),
@@ -1322,15 +1336,14 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Render message content based on type
-                      _buildMessageContent(message, isMe),
+                      _buildMessageContent(message, isMe, bubbleTextColor, bubbleSecondaryTextColor),
                       const SizedBox(height: 6),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             message.timestamp.toLocal().toString().substring(11, 16),
-                            style: const TextStyle(fontSize: 10, color: AppTheme.textColorSecondary),
+                            style: TextStyle(fontSize: 10, color: bubbleSecondaryTextColor),
                           ),
                           const SizedBox(width: 6),
                           if (isMe)
@@ -1341,10 +1354,10 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                       ? Icons.done_rounded
                                       : Icons.schedule_rounded,
                               size: 14,
-                              color: message.status == 'read' ? AppTheme.mintGreen : AppTheme.textColorSecondary,
+                              color: ticksColor,
                             ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.hub_outlined, size: 12, color: AppTheme.electricBlueLight),
+                          Icon(Icons.hub_outlined, size: 12, color: bubbleSecondaryTextColor),
                         ],
                       )
                     ],
@@ -1358,11 +1371,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     );
   }
 
-  Widget _buildMessageContent(MessageModel message, bool isMe) {
+  Widget _buildMessageContent(MessageModel message, bool isMe, Color textColor, Color secondaryTextColor) {
+    final palette = ThemeManager.currentTheme;
     if (message.messageType == 'text') {
       return Text(
         message.content,
-        style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 14, height: 1.3),
+        style: TextStyle(color: textColor, fontSize: 14, height: 1.3),
       );
     } else if (message.messageType == 'image') {
       return Column(
@@ -1374,14 +1388,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.borderLight),
+              border: Border.all(color: palette.border.withOpacity(0.2)),
             ),
-            child: const Center(
-              child: Icon(Icons.image_outlined, size: 50, color: AppTheme.textColorSecondary),
-            ),
+            child: Icon(Icons.image_outlined, size: 50, color: secondaryTextColor),
           ),
           const SizedBox(height: 6),
-          const Text("Photo Attachment", style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 12)),
+          Text("Photo Attachment", style: TextStyle(color: secondaryTextColor, fontSize: 12)),
         ],
       );
     } else if (message.messageType == 'document') {
@@ -1391,7 +1403,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
           color: Colors.black.withOpacity(0.2),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.picture_as_pdf, color: Colors.redAccent),
@@ -1447,7 +1459,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                             point: LatLng(lat, lon),
                             width: 40,
                             height: 40,
-                            child: const Icon(
+                            child: Icon(
                               Icons.location_on,
                               color: AppTheme.crimsonRed,
                               size: 30,
@@ -1463,12 +1475,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.place_rounded, size: 16, color: AppTheme.mintGreen),
+                Icon(Icons.place_rounded, size: 16, color: AppTheme.mintGreen),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     address,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.textColorPrimary,
                       fontSize: 13,
@@ -1482,7 +1494,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             const SizedBox(height: 2),
             Text(
               "${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}",
-              style: const TextStyle(fontSize: 10, color: AppTheme.textColorSecondary),
+              style: TextStyle(fontSize: 10, color: AppTheme.textColorSecondary),
             ),
           ],
         ),
@@ -1503,7 +1515,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
         return AlertDialog(
           backgroundColor: AppTheme.surfaceColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          title: Row(
             children: [
               Icon(Icons.hub_outlined, color: AppTheme.electricBlueLight),
               SizedBox(width: 8),
@@ -1514,7 +1526,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Routing Path:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textColorSecondary)),
+              Text("Routing Path:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textColorSecondary)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1526,7 +1538,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 ),
                 child: Text(
                   pathString,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 12,
                     color: AppTheme.electricBlueLight,
@@ -1534,15 +1546,15 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text("Hop Count: ${message.routePath.length}", style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text("Hop Count: ${message.routePath.length}", style: TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
-              Text("Status: ${message.status.toUpperCase()}", style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text("Status: ${message.status.toUpperCase()}", style: TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Close", style: TextStyle(color: AppTheme.mintGreen, fontWeight: FontWeight.bold)),
+              child: Text("Close", style: TextStyle(color: AppTheme.mintGreen, fontWeight: FontWeight.bold)),
             )
           ],
         );
@@ -1586,7 +1598,7 @@ class _BlinkingRecordDotState extends State<_BlinkingRecordDot>
       child: Container(
         width: 12,
         height: 12,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTheme.crimsonRed,
           shape: BoxShape.circle,
           boxShadow: [
@@ -1737,6 +1749,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   bool _isLoading = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  double _playbackSpeed = 1.0;
   StreamSubscription? _playerStateSubscription;
   StreamSubscription? _positionSubscription;
   StreamSubscription? _durationSubscription;
@@ -1802,6 +1815,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
       if (_position > Duration.zero) {
         AudioService().registerPlaying(_audioPlayer);
         await _audioPlayer.resume();
+        await _audioPlayer.setPlaybackRate(_playbackSpeed);
       } else {
         setState(() {
           _isLoading = true;
@@ -1810,6 +1824,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           final source = await _getAudioSource();
           AudioService().registerPlaying(_audioPlayer);
           await _audioPlayer.play(source);
+          await _audioPlayer.setPlaybackRate(_playbackSpeed);
         } catch (e) {
           print("Error playing audio: $e");
           if (mounted) {
@@ -1825,6 +1840,23 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           }
         }
       }
+    }
+  }
+
+  void _toggleSpeed() async {
+    setState(() {
+      if (_playbackSpeed == 1.0) {
+        _playbackSpeed = 1.5;
+      } else if (_playbackSpeed == 1.5) {
+        _playbackSpeed = 2.0;
+      } else {
+        _playbackSpeed = 1.0;
+      }
+    });
+    try {
+      await _audioPlayer.setPlaybackRate(_playbackSpeed);
+    } catch (e) {
+      print("Error setting playback rate: $e");
     }
   }
 
@@ -1845,68 +1877,153 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
-    final playerColor = widget.isMe ? Colors.white : AppTheme.mintGreen;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_isLoading)
-          SizedBox(
-            width: 30,
-            height: 30,
-            child: Padding(
-              padding: const EdgeInsets.all(6.0),
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: playerColor,
-              ),
-            ),
-          )
-        else
-          IconButton(
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            padding: EdgeInsets.zero,
-            icon: Icon(
-              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: playerColor,
-              size: 28,
-            ),
-            onPressed: _togglePlay,
-          ),
-        const SizedBox(width: 4),
-        _MiniEqualizer(
-          isPlaying: _isPlaying,
-          color: playerColor.withOpacity(0.8),
+    final palette = ThemeManager.currentTheme;
+    final playerColor = widget.isMe ? Colors.white : palette.accent;
+    final inactiveColor = widget.isMe ? Colors.white30 : palette.border.withOpacity(0.3);
+    final textColor = widget.isMe ? Colors.white.withOpacity(0.8) : palette.textSecondary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      constraints: const BoxConstraints(maxWidth: 260),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: widget.isMe ? Colors.white10 : palette.border.withOpacity(0.1),
         ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 3.0,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
-              activeTrackColor: widget.isMe ? Colors.white : AppTheme.mintGreen,
-              inactiveTrackColor: widget.isMe ? Colors.white30 : AppTheme.borderLight,
-              thumbColor: widget.isMe ? Colors.white : AppTheme.mintGreen,
-              overlayColor: widget.isMe ? Colors.white12 : AppTheme.mintGreen.withOpacity(0.12),
-            ),
-            child: Slider(
-              value: _position.inMilliseconds.toDouble().clamp(0.0, _duration.inMilliseconds.toDouble()),
-              max: _duration.inMilliseconds > 0 ? _duration.inMilliseconds.toDouble() : 1.0,
-              onChanged: (val) {
-                _audioPlayer.seek(Duration(milliseconds: val.toInt()));
-              },
+      ),
+      child: Row(
+        children: [
+          // Play/Pause button
+          _isLoading
+              ? SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6.0),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: playerColor,
+                    ),
+                  ),
+                )
+              : Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: playerColor.withOpacity(0.15),
+                  ),
+                  child: Center(
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: Icon(
+                        _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        color: playerColor,
+                        size: 22,
+                      ),
+                      onPressed: _togglePlay,
+                    ),
+                  ),
+                ),
+          const SizedBox(width: 12),
+          
+          // Waveform + Time/Speed column
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Waveform Row
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    const int barCount = 24;
+                    // Generate deterministic heights based on messageId hash to look like a real audio waveform
+                    final heights = List.generate(barCount, (index) {
+                      final seed = widget.message.messageId.hashCode + index * 13;
+                      final base = 5.0 + (seed.abs() % 14).toDouble();
+                      // Give it a more natural waveform curve shape (tapered edges, higher center)
+                      final multiplier = 1.0 - ((index - barCount / 2).abs() / (barCount / 2)) * 0.4;
+                      return base * multiplier;
+                    });
+                    
+                    final progress = _duration.inMilliseconds > 0
+                        ? _position.inMilliseconds / _duration.inMilliseconds
+                        : 0.0;
+                    final activeBarsCount = (progress * barCount).floor();
+                    
+                    void seekToPosition(Offset localPos) {
+                      final double dx = localPos.dx;
+                      final double fraction = (dx / constraints.maxWidth).clamp(0.0, 1.0);
+                      final targetMs = (fraction * _duration.inMilliseconds).toInt();
+                      _audioPlayer.seek(Duration(milliseconds: targetMs));
+                    }
+                    
+                    return GestureDetector(
+                      onHorizontalDragUpdate: (details) => seekToPosition(details.localPosition),
+                      onTapDown: (details) => seekToPosition(details.localPosition),
+                      child: Container(
+                        height: 26,
+                        color: Colors.transparent, // expanded tap/drag target area
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(barCount, (index) {
+                            final isActive = index < activeBarsCount;
+                            return Container(
+                              width: 2.8,
+                              height: heights[index],
+                              decoration: BoxDecoration(
+                                color: isActive ? playerColor : inactiveColor,
+                                borderRadius: BorderRadius.circular(1.5),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 5),
+                
+                // Time & Speed Multiplier
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatDuration(_position) + " / " + (_duration == Duration.zero ? "0:00" : _formatDuration(_duration)),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: textColor,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _toggleSpeed,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: playerColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: playerColor.withOpacity(0.25), width: 0.8),
+                        ),
+                        child: Text(
+                          "${_playbackSpeed.toStringAsFixed(1)}x",
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: playerColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          _formatDuration(_position) + " / " + (_duration == Duration.zero ? "0:00" : _formatDuration(_duration)),
-          style: TextStyle(
-            fontSize: 10,
-            color: widget.isMe ? Colors.white70 : AppTheme.textColorSecondary,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1937,7 +2054,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
     
     return Container(
       height: screenHeight * 0.8,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppTheme.obsidianBackground,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
@@ -1967,7 +2084,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.location_on_rounded, color: AppTheme.mintGreen),
                         SizedBox(width: 8),
@@ -1982,7 +2099,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: AppTheme.textColorSecondary),
+                      icon: Icon(Icons.close, color: AppTheme.textColorSecondary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -2026,7 +2143,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                               point: _selectedLatLng,
                               width: 80,
                               height: 80,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.location_on,
                                 color: AppTheme.crimsonRed,
                                 size: 42,
@@ -2046,7 +2163,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                         foregroundColor: AppTheme.mintGreen,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          side: const BorderSide(color: AppTheme.borderLight),
+                          side: BorderSide(color: AppTheme.borderLight),
                         ),
                         onPressed: () {
                           _mapController.move(_selectedLatLng, 15.0);
@@ -2062,8 +2179,8 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
           
           // Landmarks horizontal list
           const SizedBox(height: 12),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -2148,7 +2265,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                     ),
                     child: Row(
                       children: [
-                        const CircleAvatar(
+                        CircleAvatar(
                           backgroundColor: Colors.black26,
                           child: Icon(Icons.place, color: AppTheme.crimsonRed),
                         ),
@@ -2159,7 +2276,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                             children: [
                               Text(
                                 _selectedAddress,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: AppTheme.textColorPrimary,
                                   fontSize: 14,
@@ -2170,7 +2287,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                               const SizedBox(height: 2),
                               Text(
                                 "Lat: ${_selectedLatLng.latitude.toStringAsFixed(5)}, Lon: ${_selectedLatLng.longitude.toStringAsFixed(5)}",
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: AppTheme.textColorSecondary,
                                 ),

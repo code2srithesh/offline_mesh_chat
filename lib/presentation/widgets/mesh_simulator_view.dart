@@ -87,7 +87,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
                   Icon(Icons.radar_rounded, color: AppTheme.mintGreen, size: 20),
                   SizedBox(width: 8),
@@ -276,7 +276,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.terminal_rounded, size: 16, color: AppTheme.electricBlueLight),
                         SizedBox(width: 8),
@@ -447,7 +447,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                       shape: BoxShape.circle,
                       color: AppTheme.mintGreen.withOpacity(0.15),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.chat_bubble_outline_rounded,
                       size: 12,
                       color: AppTheme.mintGreen,
@@ -469,11 +469,11 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
         return AlertDialog(
           backgroundColor: AppTheme.surfaceColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Create Virtual Node", style: TextStyle(color: AppTheme.textColorPrimary, fontWeight: FontWeight.bold)),
+          title: Text("Create Virtual Node", style: TextStyle(color: AppTheme.textColorPrimary, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: _nodeNameController,
-            style: const TextStyle(color: AppTheme.textColorPrimary, fontWeight: FontWeight.w600),
-            decoration: const InputDecoration(
+            style: TextStyle(color: AppTheme.textColorPrimary, fontWeight: FontWeight.w600),
+            decoration: InputDecoration(
               hintText: "Enter node name (e.g. David)",
               hintStyle: TextStyle(color: AppTheme.textColorSecondary),
             ),
@@ -481,7 +481,7 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel", style: TextStyle(color: AppTheme.textColorSecondary, fontWeight: FontWeight.bold)),
+              child: Text("Cancel", style: TextStyle(color: AppTheme.textColorSecondary, fontWeight: FontWeight.bold)),
             ),
             ElevatedButton(
               onPressed: () {

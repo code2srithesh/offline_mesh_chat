@@ -291,9 +291,15 @@ class MockCommunicationService implements CommunicationService {
     if (destId == _hostId) {
       // Send to Host
       if (hostOnline) {
-        final dist = _calculateDistance(hostX, hostY, nodes.firstWhere((n) => n.deviceId == sourceId).x, nodes.firstWhere((n) => n.deviceId == sourceId).y);
-        if (dist <= 180) {
-          _incomingPayloadController.add(CommPayload(senderDeviceId: sourceId, data: rawData));
+        final sourceNode = nodes.firstWhere(
+          (n) => n.deviceId == sourceId,
+          orElse: () => SimulatedNode(deviceId: '', name: '', profilePicture: '', x: 0, y: 0),
+        );
+        if (sourceNode.deviceId.isNotEmpty) {
+          final dist = _calculateDistance(hostX, hostY, sourceNode.x, sourceNode.y);
+          if (dist <= 180) {
+            _incomingPayloadController.add(CommPayload(senderDeviceId: sourceId, data: rawData));
+          }
         }
       }
       return;

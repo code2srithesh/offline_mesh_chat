@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/app_providers.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -11,70 +12,47 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final TextEditingController _nameEditController = TextEditingController();
-  bool _isEditingName = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = ref.read(profileProvider);
-    if (profile != null) {
-      _nameEditController.text = profile.name;
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameEditController.dispose();
-    super.dispose();
-  }
-
-  void _updateProfileName() {
-    final name = _nameEditController.text.trim();
-    if (name.isEmpty) return;
-
-    final profile = ref.read(profileProvider);
-    if (profile != null) {
-      ref.read(profileProvider.notifier).updateProfile(name, profile.profilePicture);
-      setState(() {
-        _isEditingName = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile name updated successfully!')),
-      );
-    }
-  }
 
   void _clearDatabase() async {
     final storage = ref.read(storageServiceProvider);
-    
+    final palette = ThemeManager.currentTheme;
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.surfaceColor,
-          title: const Text("Clear Database", style: TextStyle(color: AppTheme.textColorPrimary)),
-          content: const Text(
+          backgroundColor: palette.secondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: palette.border.withOpacity(0.3)),
+          ),
+          title: Text(
+            "Clear Database",
+            style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
             "Are you sure you want to permanently erase all chat logs, user profiles, routing tables, and security keys? This cannot be undone.",
-            style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 13),
+            style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 13, height: 1.4),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel", style: TextStyle(color: AppTheme.textColorSecondary)),
+              child: Text("CANCEL", style: TextStyle(color: palette.textSecondary)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.crimsonRed),
+              style: ElevatedButton.styleFrom(backgroundColor: palette.error),
               onPressed: () async {
                 await storage.clearAllData();
                 Navigator.of(context).pop();
                 
-                // Restart app by pushing onboarding or restarting state
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Database erased. Please restart the application.')),
+                  SnackBar(
+                    content: const Text('Database erased. Please restart the terminal app.'),
+                    backgroundColor: palette.error,
+                  ),
                 );
               },
-              child: const Text("Erase Data", style: TextStyle(color: Colors.white)),
+              child: const Text("ERASE DATA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             )
           ],
         );
@@ -86,198 +64,163 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final profile = ref.watch(profileProvider);
     final isSimMode = ref.watch(simulationModeProvider);
-    final storage = ref.watch(storageServiceProvider);
+    final palette = ThemeManager.currentTheme;
 
     if (profile == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const SizedBox();
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.obsidianBackground,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Card
-            Card(
-              color: AppTheme.surfaceColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppTheme.borderLight),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 36,
-                      backgroundColor: AppTheme.cardColor,
-                      child: Text(profile.profilePicture, style: const TextStyle(fontSize: 36)),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_isEditingName)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _nameEditController,
-                                    style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 16),
-                                    decoration: const InputDecoration(
-                                      isDense: true,
-                                      border: UnderlineInputBorder(),
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.check, color: AppTheme.mintGreen),
-                                  onPressed: _updateProfileName,
-                                )
-                              ],
-                            )
-                          else
-                            Row(
-                              children: [
-                                Text(
-                                  profile.name,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.textColorPrimary,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit, size: 16, color: AppTheme.textColorSecondary),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isEditingName = true;
-                                    });
-                                  },
-                                )
-                              ],
-                            ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Device ID: ${profile.userId.substring(0, 12)}...",
-                            style: const TextStyle(color: AppTheme.textColorSecondary, fontSize: 11),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            "Status: OfflineMesh Connected",
-                            style: TextStyle(color: AppTheme.mintGreenLight, fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Preferences Category
+        Card(
+          color: palette.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: palette.border.withOpacity(0.15)),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(Icons.radar_rounded, color: palette.accent),
+                title: Text(
+                  "Simulation Mode Overlay",
+                  style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  "Run a virtual 2D topology network in-memory to simulate multi-hop routing paths.",
+                  style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
+                ),
+                trailing: Switch(
+                  value: isSimMode,
+                  activeColor: palette.accent,
+                  onChanged: (val) {
+                    ref.read(simulationModeProvider.notifier).state = val;
+                  },
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            const Text(
-              "APP PREFERENCES",
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textColorSecondary, letterSpacing: 1.0),
-            ),
-            const SizedBox(height: 8),
-
-            // Simulation mode toggle
-            ListTile(
-              leading: const Icon(Icons.radar_rounded, color: AppTheme.electricBlueLight),
-              title: const Text("Simulation Mode Overlay", style: TextStyle(color: AppTheme.textColorPrimary)),
-              subtitle: const Text("Runs a virtual 2D topology network in-memory to test multi-hops.", style: TextStyle(fontSize: 11)),
-              trailing: Switch(
-                value: isSimMode,
-                activeColor: AppTheme.mintGreen,
-                onChanged: (val) {
-                  ref.read(simulationModeProvider.notifier).state = val;
-                },
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                leading: Icon(Icons.vpn_key_rounded, color: palette.textSecondary),
+                title: Text(
+                  "Public Key Fingerprint",
+                  style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  profile.publicKey.substring(0, 36) + "...",
+                  style: TextStyle(fontSize: 10, fontFamily: 'monospace', color: palette.textSecondary),
+                ),
+                trailing: Icon(Icons.chevron_right_rounded, color: palette.textSecondary),
+                onTap: () => _showPublicKeyDialog(context, profile.publicKey),
               ),
-            ),
-
-            const Divider(color: AppTheme.borderLight),
-
-            const SizedBox(height: 16),
-            const Text(
-              "SECURITY KEYS INFO",
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textColorSecondary, letterSpacing: 1.0),
-            ),
-            const SizedBox(height: 8),
-
-            ListTile(
-              leading: const Icon(Icons.vpn_key_rounded, color: AppTheme.textColorSecondary),
-              title: const Text("Public Key Fingerprint", style: TextStyle(color: AppTheme.textColorPrimary)),
-              subtitle: Text(
-                profile.publicKey.substring(0, 40) + "...",
-                style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
-              ),
-              onTap: () => _showPublicKeyDialog(context, profile.publicKey),
-            ),
-
-            const Divider(color: AppTheme.borderLight),
-
-            const SizedBox(height: 16),
-            const Text(
-              "STORAGE MANAGEMENT",
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textColorSecondary, letterSpacing: 1.0),
-            ),
-            const SizedBox(height: 8),
-
-            ListTile(
-              leading: const Icon(Icons.storage_rounded, color: AppTheme.textColorSecondary),
-              title: const Text("Database Storage Size", style: TextStyle(color: AppTheme.textColorPrimary)),
-              subtitle: const Text("Total: ~240 KB (Hive storage tables)", style: TextStyle(fontSize: 12)),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.delete_forever_rounded, color: AppTheme.crimsonRedLight),
-              title: const Text("Erase All Database Tables", style: TextStyle(color: AppTheme.crimsonRedLight)),
-              onTap: _clearDatabase,
-            ),
-
-            const SizedBox(height: 40),
-            Center(
-              child: Text(
-                "OfflineMesh Chat v1.0.0 (Local Build)",
-                style: TextStyle(color: AppTheme.textColorSecondary.withOpacity(0.5), fontSize: 11),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        const SizedBox(height: 16),
+
+        // Storage & Cache
+        Card(
+          color: palette.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: palette.border.withOpacity(0.15)),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(Icons.storage_rounded, color: palette.textSecondary),
+                title: Text(
+                  "Database Storage Size",
+                  style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  "Total: ~280 KB (Hive local storage tables)",
+                  style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
+                ),
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                leading: Icon(Icons.delete_forever_rounded, color: palette.error),
+                title: Text(
+                  "Erase All Database Tables",
+                  style: GoogleFonts.poppins(color: palette.error, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  "Resets security credentials, clears mesh caches, and logs.",
+                  style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
+                ),
+                onTap: _clearDatabase,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Footer Build
+        Center(
+          child: Column(
+            children: [
+              Text(
+                "OfflineMesh Protocol v1.2.0-Alpha",
+                style: GoogleFonts.spaceGrotesk(
+                  color: palette.textSecondary.withOpacity(0.4),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "E2E LINK SECURITY HANDSHAKE ACTIVE",
+                style: GoogleFonts.spaceGrotesk(
+                  color: palette.success.withOpacity(0.5),
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 
   void _showPublicKeyDialog(BuildContext context, String pubKey) {
+    final palette = ThemeManager.currentTheme;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.surfaceColor,
-          title: const Text("Asymmetric Public Key", style: TextStyle(color: AppTheme.textColorPrimary)),
+          backgroundColor: palette.secondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: palette.border.withOpacity(0.3)),
+          ),
+          title: Text(
+            "Terminal Public Key",
+            style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontWeight: FontWeight.bold),
+          ),
           content: SingleChildScrollView(
             child: Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.borderLight),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: palette.border.withOpacity(0.25)),
               ),
               child: Text(
                 pubKey,
-                style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: AppTheme.textColorSecondary),
+                style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.white70),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Dismiss", style: TextStyle(color: AppTheme.mintGreen)),
+              child: Text("DISMISS", style: GoogleFonts.spaceGrotesk(color: palette.accent, fontWeight: FontWeight.bold)),
             )
           ],
         );

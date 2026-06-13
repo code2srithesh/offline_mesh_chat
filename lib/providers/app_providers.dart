@@ -8,6 +8,7 @@ import '../data/services/nearby_service.dart';
 import '../data/services/storage_service.dart';
 import '../data/services/routing_service.dart';
 import '../core/security/encryption_service.dart';
+import '../core/theme/app_theme.dart';
 
 // --- System Services Providers ---
 final storageServiceProvider = Provider<StorageService>((ref) => StorageService());
@@ -46,7 +47,22 @@ class ProfileNotifier extends StateNotifier<UserModel?> {
 
   Future<void> _loadProfile() async {
     await _storage.init();
-    final profile = await _storage.getMyProfile();
+    var profile = await _storage.getMyProfile();
+    if (profile == null) {
+      final deviceId = const Uuid().v4();
+      final keyPair = _encryption.generateKeyPair();
+      profile = UserModel(
+        userId: deviceId,
+        name: "User_${deviceId.substring(0, 4)}",
+        profilePicture: "🚀",
+        deviceId: deviceId,
+        publicKey: keyPair['publicKey']!,
+        createdAt: DateTime.now(),
+      );
+      await _storage.saveMyProfile(profile);
+      await _storage.savePrivateKey(keyPair['privateKey']!);
+    }
+    MockCommunicationService().setHostDetails(profile.userId, profile.name, profile.profilePicture);
     state = profile;
   }
 
@@ -150,5 +166,33 @@ class VerifiedUsersNotifier extends StateNotifier<Set<String>> {
 final verifiedUsersProvider = StateNotifierProvider<VerifiedUsersNotifier, Set<String>>((ref) {
   final storage = ref.watch(storageServiceProvider);
   return VerifiedUsersNotifier(storage);
+});
+
+// --- Theme Notifier ---
+class ThemeNotifier extends StateNotifier<ThemePalette> {
+  final StorageService _storage;
+
+  ThemeNotifier(this._storage) : super(ThemeManager.defaultCyber) {
+    _loadTheme();
+  }
+
+  void _loadTheme() {
+    final themeId = _storage.getThemeId();
+    final theme = ThemeManager.themes[themeId] ?? ThemeManager.defaultCyber;
+    ThemeManager.currentTheme = theme;
+    state = theme;
+  }
+
+  Future<void> changeTheme(String themeId) async {
+    final theme = ThemeManager.themes[themeId] ?? ThemeManager.defaultCyber;
+    await _storage.setThemeId(themeId);
+    ThemeManager.currentTheme = theme;
+    state = theme;
+  }
+}
+
+final themePaletteProvider = StateNotifierProvider<ThemeNotifier, ThemePalette>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return ThemeNotifier(storage);
 });
 

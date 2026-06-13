@@ -1,122 +1,319 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class ThemePalette {
+  final String id;
+  final String name;
+  final Color background;
+  final Color secondary;
+  final Color card;
+  final Color accent;
+  final Color accentLight;
+  final Color success;
+  final Color warning;
+  final Color error;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color border;
+
+  const ThemePalette({
+    required this.id,
+    required this.name,
+    required this.background,
+    required this.secondary,
+    required this.card,
+    required this.accent,
+    required this.accentLight,
+    required this.success,
+    required this.warning,
+    required this.error,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.border,
+  });
+}
+
+class ThemeManager {
+  static const ThemePalette defaultCyber = ThemePalette(
+    id: 'default',
+    name: 'Default Cyber',
+    background: Color(0xFF0B0F1A),
+    secondary: Color(0xFF111827),
+    card: Color(0xFF151B2E),
+    accent: Color(0xFF6D5DFC),
+    accentLight: Color(0xFF8B7CFF),
+    success: Color(0xFF00D68F),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5C5C),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFB3B8C4),
+    border: Color(0x336D5DFC),
+  );
+
+  static const ThemePalette midnightPurple = ThemePalette(
+    id: 'purple',
+    name: 'Midnight Purple',
+    background: Color(0xFF120E2E),
+    secondary: Color(0xFF1A153E),
+    card: Color(0xFF231D54),
+    accent: Color(0xFF9D4EDD),
+    accentLight: Color(0xFFC77DFF),
+    success: Color(0xFF00D68F),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5C5C),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFC3C1E6),
+    border: Color(0x339D4EDD),
+  );
+
+  static const ThemePalette cyberBlue = ThemePalette(
+    id: 'blue',
+    name: 'Cyber Blue',
+    background: Color(0xFF07162C),
+    secondary: Color(0xFF0B2240),
+    card: Color(0xFF113158),
+    accent: Color(0xFF00B4D8),
+    accentLight: Color(0xFF90E0EF),
+    success: Color(0xFF00D68F),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5C5C),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFA0C4E2),
+    border: Color(0x3300B4D8),
+  );
+
+  static const ThemePalette emeraldGreen = ThemePalette(
+    id: 'green',
+    name: 'Emerald Green',
+    background: Color(0xFF051A15),
+    secondary: Color(0xFF092A22),
+    card: Color(0xFF0F3C31),
+    accent: Color(0xFF10B981),
+    accentLight: Color(0xFF34D399),
+    success: Color(0xFF00E676),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5C5C),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFA3C2B9),
+    border: Color(0x3310B981),
+  );
+
+  static const ThemePalette sunsetOrange = ThemePalette(
+    id: 'orange',
+    name: 'Sunset Orange',
+    background: Color(0xFF1F0E0E),
+    secondary: Color(0xFF2E1616),
+    card: Color(0xFF412020),
+    accent: Color(0xFFFF7A00),
+    accentLight: Color(0xFFFF9F43),
+    success: Color(0xFF00D68F),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5C5C),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFD2BCBC),
+    border: Color(0x33FF7A00),
+  );
+
+  static const ThemePalette roseGold = ThemePalette(
+    id: 'rose',
+    name: 'Rose Gold',
+    background: Color(0xFF1C1215),
+    secondary: Color(0xFF2A1B20),
+    card: Color(0xFF3D272E),
+    accent: Color(0xFFE29578),
+    accentLight: Color(0xFFFFDDD2),
+    success: Color(0xFF00D68F),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5C5C),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFCDB3BA),
+    border: Color(0x33E29578),
+  );
+
+  static const ThemePalette amoledBlack = ThemePalette(
+    id: 'black',
+    name: 'AMOLED Black',
+    background: Color(0xFF000000),
+    secondary: Color(0xFF0A0A0A),
+    card: Color(0xFF121212),
+    accent: Color(0xFFFFFFFF),
+    accentLight: Color(0xFFE0E0E0),
+    success: Color(0xFF00D68F),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5C5C),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFF9E9E9E),
+    border: Color(0x33FFFFFF),
+  );
+
+  static const Map<String, ThemePalette> themes = {
+    'default': defaultCyber,
+    'purple': midnightPurple,
+    'blue': cyberBlue,
+    'green': emeraldGreen,
+    'orange': sunsetOrange,
+    'rose': roseGold,
+    'black': amoledBlack,
+  };
+
+  static ThemePalette currentTheme = defaultCyber;
+}
 
 class AppTheme {
-  // Deep Cyber Space Color Palette
-  static const Color obsidianBackground = Color(0xFF06090E); // Slate-black backdrop
-  static const Color surfaceColor = Color(0xFF0F172A);       // Slate-900 surface
-  static const Color cardColor = Color(0xFF1E293B);          // Slate-800 card
-  static const Color borderLight = Color(0x3364748B);        // Soft blue-gray border (20% Slate-500)
+  // Static getters routing to active ThemeManager config for absolute backwards compatibility
+  static Color get obsidianBackground => ThemeManager.currentTheme.background;
+  static Color get surfaceColor => ThemeManager.currentTheme.secondary;
+  static Color get cardColor => ThemeManager.currentTheme.card;
+  static Color get borderLight => ThemeManager.currentTheme.border;
 
-  // Neon Tech Accents
-  static const Color mintGreen = Color(0xFF10B981);          // Neon Mint (Secure Encrypted)
-  static const Color mintGreenLight = Color(0xFF34D399);
-  
-  static const Color electricBlue = Color(0xFF3B82F6);       // Cyber Blue (Radar & Discovery)
-  static const Color electricBlueLight = Color(0xFF60A5FA);
+  // Accents matching the design system
+  static Color get mintGreen => ThemeManager.currentTheme.success;
+  static Color get mintGreenLight => ThemeManager.currentTheme.success.withOpacity(0.8);
+  static Color get electricBlue => ThemeManager.currentTheme.accent;
+  static Color get electricBlueLight => ThemeManager.currentTheme.accentLight;
+  static Color get crimsonRed => ThemeManager.currentTheme.error;
+  static Color get crimsonRedLight => ThemeManager.currentTheme.error.withOpacity(0.8);
+  static Color get indigoTech => ThemeManager.currentTheme.accent;
+  static Color get indigoTechLight => ThemeManager.currentTheme.accentLight;
 
-  static const Color crimsonRed = Color(0xFFF43F5E);         // Cyber Crimson (SOS / Distress)
-  static const Color crimsonRedLight = Color(0xFFFB7185);
+  static Color get textColorPrimary => ThemeManager.currentTheme.textPrimary;
+  static Color get textColorSecondary => ThemeManager.currentTheme.textSecondary;
 
-  static const Color indigoTech = Color(0xFF6366F1);          // Indigo Accent (System & Routing)
-  static const Color indigoTechLight = Color(0xFF818CF8);
-
-  static const Color textColorPrimary = Color(0xFFF8FAFC);    // Slate-50 high contrast text
-  static const Color textColorSecondary = Color(0xFF94A3B8);  // Slate-400 secondary text
-
-  // Premium Glassmorphism Decoration
+  // Adaptable glassmorphism styles
   static BoxDecoration glassCardDecoration({
-    Color color = const Color(0x1F94A3B8), // Glassy white-gray translucency
+    Color? color,
     double borderRadius = 16,
     double borderWidth = 1.0,
-    Color borderColor = borderLight,
+    Color? borderColor,
   }) {
+    final palette = ThemeManager.currentTheme;
     return BoxDecoration(
-      color: color,
+      color: color ?? palette.card.withOpacity(0.65),
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(
-        color: borderColor,
+        color: borderColor ?? palette.border.withOpacity(0.2),
         width: borderWidth,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.25),
-          blurRadius: 15,
-          offset: const Offset(0, 6),
+          color: Colors.black.withOpacity(0.3),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
         )
       ],
     );
   }
 
-  // Gradients
-  static const LinearGradient premiumBlueGradient = LinearGradient(
-    colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  // Adaptive Gradients
+  static LinearGradient get premiumBlueGradient {
+    final palette = ThemeManager.currentTheme;
+    return LinearGradient(
+      colors: [palette.accent, palette.accentLight],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
 
-  static const LinearGradient premiumGreenGradient = LinearGradient(
-    colors: [Color(0xFF047857), Color(0xFF10B981)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static LinearGradient get premiumGreenGradient {
+    final palette = ThemeManager.currentTheme;
+    return LinearGradient(
+      colors: [palette.success, palette.accent],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
 
-  static const LinearGradient premiumRedGradient = LinearGradient(
-    colors: [Color(0xFFBE123C), Color(0xFFF43F5E)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static LinearGradient get premiumRedGradient {
+    final palette = ThemeManager.currentTheme;
+    return LinearGradient(
+      colors: [palette.error, palette.error.withOpacity(0.7)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
 
-  static const LinearGradient premiumIndigoGradient = LinearGradient(
-    colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static LinearGradient get premiumIndigoGradient {
+    final palette = ThemeManager.currentTheme;
+    return LinearGradient(
+      colors: [palette.accent, palette.accentLight],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
 
-  static const LinearGradient premiumDarkGradient = LinearGradient(
-    colors: [Color(0xFF030712), Color(0xFF0F172A)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static LinearGradient get premiumDarkGradient {
+    final palette = ThemeManager.currentTheme;
+    return LinearGradient(
+      colors: [palette.background, palette.secondary],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
 
-  // High-End Dark Theme configuration
+  // Dynamic Theme Builder
   static ThemeData get darkTheme {
+    final palette = ThemeManager.currentTheme;
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: mintGreen,
-      scaffoldBackgroundColor: obsidianBackground,
-      colorScheme: const ColorScheme.dark(
-        primary: mintGreen,
-        secondary: electricBlue,
-        tertiary: indigoTech,
-        surface: surfaceColor,
-        background: obsidianBackground,
-        error: crimsonRed,
+      primaryColor: palette.accent,
+      scaffoldBackgroundColor: palette.background,
+      colorScheme: ColorScheme.dark(
+        primary: palette.accent,
+        secondary: palette.accentLight,
+        surface: palette.secondary,
+        background: palette.background,
+        error: palette.error,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: surfaceColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: palette.background,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: textColorPrimary,
+        titleTextStyle: GoogleFonts.poppins(
+          color: palette.textPrimary,
           fontSize: 20,
-          fontWeight: FontWeight.w800, // Thicker font weight
+          fontWeight: FontWeight.w600,
           letterSpacing: -0.5,
         ),
-        iconTheme: IconThemeData(color: textColorPrimary),
+        iconTheme: IconThemeData(color: palette.textPrimary),
       ),
       cardTheme: CardThemeData(
-        color: cardColor,
+        color: palette.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: borderLight, width: 1),
+          side: BorderSide(color: palette.border.withOpacity(0.25), width: 1),
         ),
       ),
-      textTheme: const TextTheme(
-        headlineMedium: TextStyle(color: textColorPrimary, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-        bodyLarge: TextStyle(color: textColorPrimary, fontSize: 16, height: 1.4, letterSpacing: 0.1),
-        bodyMedium: TextStyle(color: textColorSecondary, fontSize: 14, height: 1.4),
+      textTheme: TextTheme(
+        headlineLarge: GoogleFonts.spaceGrotesk(
+          color: palette.textPrimary,
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          letterSpacing: -0.5,
+        ),
+        headlineMedium: GoogleFonts.poppins(
+          color: palette.textPrimary,
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.5,
+        ),
+        bodyLarge: GoogleFonts.inter(
+          color: palette.textPrimary,
+          fontSize: 16,
+          height: 1.45,
+          letterSpacing: 0.1,
+        ),
+        bodyMedium: GoogleFonts.inter(
+          color: palette.textSecondary,
+          fontSize: 14,
+          height: 1.4,
+        ),
+        labelLarge: GoogleFonts.inter(
+          color: palette.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -146,9 +343,9 @@ class _AnimatedPressState extends State<AnimatedPress> with SingleTickerProvider
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 80),
+      duration: const Duration(milliseconds: 100),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.94).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
   }

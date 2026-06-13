@@ -1,11 +1,14 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
 import '../../core/theme/app_theme.dart';
 import 'chat_details_screen.dart';
-import '../widgets/mesh_simulator_view.dart';
 import 'settings_screen.dart';
+import '../widgets/mesh_simulator_view.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -18,19 +21,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
 
   final List<String> _titles = [
-    "OfflineMesh Chat",
-    "Mesh Radar & Simulator",
-    "Emergency SOS",
-    "Settings"
+    "Secure Chats",
+    "Discover Mesh",
+    "Terminal Settings"
   ];
 
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(profileProvider);
+    final palette = ThemeManager.currentTheme;
 
     if (profile == null) {
-      return const Scaffold(
-        body: Center(
+      return Scaffold(
+        backgroundColor: palette.background,
+        body: const Center(
           child: CircularProgressIndicator(),
         ),
       );
@@ -38,22 +42,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final List<Widget> tabs = [
       const _ChatsTab(),
-      const MeshSimulatorView(),
-      const _SOSTab(),
-      const SettingsScreen(),
+      const _DiscoverTab(),
+      const _ProfileTab(),
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.obsidianBackground,
+      backgroundColor: palette.background,
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        actions: [
-          if (_currentIndex == 0)
-            IconButton(
-              icon: const Icon(Icons.qr_code_scanner, color: AppTheme.textColorPrimary),
-              onPressed: () => _showPairingQR(context, profile),
-              tooltip: "Show Pairing QR",
-            ),
+        backgroundColor: palette.background,
+        elevation: 0,
+        title: Text(
+          _titles[_currentIndex],
+          style: GoogleFonts.spaceGrotesk(
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            color: palette.textPrimary,
+          ),
+        ),
+        actions: const [
+          SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
@@ -65,35 +72,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 children: tabs,
               ),
             ),
-            _buildBottomNavBar(),
+            _buildBottomNavBar(palette),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBottomNavBar() {
+  Widget _buildBottomNavBar(ThemePalette palette) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      height: 64,
+      height: 68,
       decoration: AppTheme.glassCardDecoration(
-        color: AppTheme.surfaceColor.withOpacity(0.85),
-        borderRadius: 32,
+        color: palette.secondary.withOpacity(0.85),
+        borderRadius: 34,
         borderWidth: 1.5,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(0, Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats'),
-          _buildNavItem(1, Icons.radar_outlined, Icons.radar_rounded, 'Radar'),
-          _buildNavItem(2, Icons.warning_amber_rounded, Icons.warning_rounded, 'SOS'),
-          _buildNavItem(3, Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
+          _buildNavItem(0, Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats', palette),
+          _buildNavItem(1, Icons.radar_outlined, Icons.radar_rounded, 'Discover', palette),
+          _buildNavItem(2, Icons.terminal_outlined, Icons.terminal_rounded, 'Settings', palette),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label, ThemePalette palette) {
     final isSelected = _currentIndex == index;
     return AnimatedPress(
       onTap: () {
@@ -105,445 +111,547 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: isSelected ? AppTheme.mintGreen.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          color: isSelected ? palette.accent.withOpacity(0.12) : Colors.transparent,
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               isSelected ? activeIcon : icon,
-              color: isSelected ? AppTheme.mintGreen : AppTheme.textColorSecondary,
+              color: isSelected ? palette.accent : palette.textSecondary,
               size: 24,
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppTheme.mintGreen,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                  letterSpacing: 0.5,
-                ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: isSelected ? palette.accent : palette.textSecondary,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                fontSize: 10,
               ),
-            ]
+            ),
           ],
         ),
       ),
     );
   }
-
-  void _showPairingQR(BuildContext context, profile) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppTheme.surfaceColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("Scan to Pair", style: TextStyle(color: AppTheme.textColorPrimary, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Let nearby devices scan this QR code to import your profile details and exchange security keys.",
-                style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 13, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: SizedBox(
-                  width: 180,
-                  height: 180,
-                  child: Center(
-                    child: Icon(Icons.qr_code_2_rounded, size: 160, color: AppTheme.obsidianBackground),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  "ID: ${profile.userId.substring(0, 12)}...",
-                  style: const TextStyle(color: AppTheme.textColorSecondary, fontFamily: 'monospace', fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Done", style: TextStyle(color: AppTheme.mintGreen, fontWeight: FontWeight.bold)),
-            )
-          ],
-        );
-      },
-    );
-  }
 }
 
-// --- Chats Tab Layout ---
-class _ChatsTab extends ConsumerWidget {
+// --- CHATS TAB ---
+class _ChatsTab extends ConsumerStatefulWidget {
   const _ChatsTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final chats = ref.watch(chatsProvider);
-    final verifiedUsers = ref.watch(verifiedUsersProvider);
-
-    return Scaffold(
-      backgroundColor: AppTheme.obsidianBackground,
-      body: chats.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppTheme.surfaceColor,
-                      border: Border.all(color: AppTheme.borderLight),
-                    ),
-                    child: Icon(Icons.chat_bubble_outline_rounded, size: 48, color: AppTheme.textColorSecondary.withOpacity(0.5)),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    "No Active Chats",
-                    style: TextStyle(color: AppTheme.textColorPrimary, fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 8),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40.0),
-                    child: Text(
-                      "Navigate to the Radar tab to discover and connect with nearby devices to begin messaging.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 13, height: 1.45),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: chats.length,
-              itemBuilder: (context, index) {
-                final chat = chats[index];
-                final isGroup = chat.type == 'group';
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  color: AppTheme.surfaceColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: AppTheme.borderLight, width: 1.0),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    leading: Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: (isGroup ? AppTheme.indigoTech : AppTheme.mintGreen).withOpacity(0.1),
-                        border: Border.all(
-                          color: (isGroup ? AppTheme.indigoTech : AppTheme.mintGreen).withOpacity(0.35),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          isGroup ? "👥" : "💬",
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                      ),
-                    ),
-                    title: Row(
-                      children: [
-                        Text(
-                          chat.name,
-                          style: const TextStyle(
-                            color: AppTheme.textColorPrimary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                        if (!isGroup && verifiedUsers.contains(chat.chatId)) ...[
-                          const SizedBox(width: 6),
-                          const Icon(Icons.verified, color: AppTheme.mintGreen, size: 16),
-                        ],
-                      ],
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        isGroup ? 'Group Relay Channel' : 'Secure Direct Connection',
-                        style: const TextStyle(color: AppTheme.textColorSecondary, fontSize: 12),
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textColorSecondary),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => ChatDetailsScreen(chatId: chat.chatId, chatName: chat.name),
-                          transitionsBuilder: (_, animation, __, child) {
-                            return SlideTransition(
-                              position: Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(
-                                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-                              ),
-                              child: child,
-                            );
-                          },
-                          transitionDuration: const Duration(milliseconds: 300),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-    );
-  }
+  ConsumerState<_ChatsTab> createState() => _ChatsTabState();
 }
 
-// --- Emergency SOS Tab Layout ---
-class _SOSTab extends ConsumerStatefulWidget {
-  const _SOSTab();
-
-  @override
-  ConsumerState<_SOSTab> createState() => _SOSTabState();
-}
-
-class _SOSTabState extends ConsumerState<_SOSTab> with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  final TextEditingController _sosController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
-  }
+class _ChatsTabState extends ConsumerState<_ChatsTab> {
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
-    _pulseController.dispose();
-    _sosController.dispose();
+    _searchController.dispose();
     super.dispose();
-  }
-
-  void _triggerSOS() {
-    final text = _sosController.text.trim();
-    final sosText = text.isNotEmpty ? text : "HELP! Emergency Distress broadcast from device.";
-    
-    // Simulate latitude/longitude
-    const lat = 12.9716;
-    const lon = 77.5946;
-
-    ref.read(sosProvider.notifier).sendSOS(sosText, lat, lon);
-    _sosController.clear();
-    FocusScope.of(context).unfocus();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('🚨 Emergency SOS alert broadcasted to all nearby devices!', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.crimsonRed,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final sosHistory = ref.watch(sosProvider);
+    final chats = ref.watch(chatsProvider);
+    final verifiedUsers = ref.watch(verifiedUsersProvider);
+    final palette = ThemeManager.currentTheme;
 
-    return Scaffold(
-      backgroundColor: AppTheme.obsidianBackground,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            // Distress Button with Multi-layered Glowing Radar Rings
-            Center(
-              child: SizedBox(
-                width: 180,
-                height: 180,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Outermost wave
-                    ScaleTransition(
-                      scale: Tween<double>(begin: 0.7, end: 1.45).animate(
-                        CurvedAnimation(parent: _pulseController, curve: Curves.easeOutCubic),
-                      ),
-                      child: Container(
-                        width: 170,
-                        height: 170,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.crimsonRed.withOpacity(0.04),
-                          border: Border.all(color: AppTheme.crimsonRed.withOpacity(0.08), width: 1.5),
+    // Filtered chats list
+    final query = _searchController.text.trim().toLowerCase();
+    var filteredList = chats.where((chat) {
+      return chat.name.toLowerCase().contains(query);
+    }).toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          _buildSearchBar(palette),
+          const SizedBox(height: 12),
+
+          // Chats list
+          Expanded(
+            child: filteredList.isEmpty
+                ? _buildEmptyState(palette)
+                : ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: filteredList.length,
+                    itemBuilder: (context, index) {
+                      final chat = filteredList[index];
+                      final isGroup = chat.type == 'group';
+                      final isVerified = verifiedUsers.contains(chat.chatId);
+                      
+                      return Dismissible(
+                        key: Key(chat.chatId),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: palette.error.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(Icons.archive_outlined, color: palette.error),
                         ),
-                      ),
-                    ),
-                    // Inner wave
-                    ScaleTransition(
-                      scale: Tween<double>(begin: 0.85, end: 1.25).animate(
-                        CurvedAnimation(parent: _pulseController, curve: Curves.easeOutCubic),
-                      ),
-                      child: Container(
-                        width: 130,
-                        height: 130,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.crimsonRed.withOpacity(0.08),
-                          border: Border.all(color: AppTheme.crimsonRed.withOpacity(0.18), width: 2),
-                        ),
-                      ),
-                    ),
-                    // Center button
-                    AnimatedPress(
-                      onTap: _triggerSOS,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppTheme.premiumRedGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.crimsonRed.withOpacity(0.4),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                              offset: const Offset(0, 4),
+                        onDismissed: (_) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Chat archived: ${chat.name}'),
+                              behavior: SnackBarBehavior.floating,
                             ),
-                          ],
-                        ),
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.wifi_tethering_rounded, size: 36, color: Colors.white),
-                            SizedBox(height: 6),
-                            Text(
-                              'SEND SOS',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 12,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Tap distress button to broadcast immediate location and emergency text to all devices within transmission range.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textColorSecondary, fontSize: 13, height: 1.4),
-            ),
-            const SizedBox(height: 20),
-            // Custom Input Box for Distress Alert
-            Container(
-              decoration: AppTheme.glassCardDecoration(
-                color: AppTheme.surfaceColor,
-                borderRadius: 12,
-                borderWidth: 1.0,
-              ),
-              child: TextField(
-                controller: _sosController,
-                style: const TextStyle(color: AppTheme.textColorPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-                decoration: const InputDecoration(
-                  hintText: "Enter custom distress message...",
-                  hintStyle: TextStyle(color: AppTheme.textColorSecondary),
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.edit_note_rounded, color: AppTheme.textColorSecondary),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Divider(color: AppTheme.borderLight),
-            const SizedBox(height: 12),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Recent SOS Alerts History',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textColorPrimary, letterSpacing: -0.5),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: sosHistory.isEmpty
-                  ? Center(
-                      child: Text(
-                        "No distress alerts registered nearby.",
-                        style: TextStyle(color: AppTheme.textColorSecondary.withOpacity(0.7)),
-                      ),
-                    )
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: sosHistory.length,
-                      itemBuilder: (context, index) {
-                        final sos = sosHistory[index];
-                        return Card(
-                          color: AppTheme.crimsonRed.withOpacity(0.07),
+                          );
+                        },
+                        child: Card(
                           margin: const EdgeInsets.symmetric(vertical: 6),
+                          color: palette.card,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(color: AppTheme.crimsonRed, width: 1.0),
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: palette.border.withOpacity(0.15)),
                           ),
                           child: ListTile(
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppTheme.crimsonRed.withOpacity(0.15),
-                              ),
-                              child: const Icon(Icons.warning_amber_rounded, color: AppTheme.crimsonRed, size: 24),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            leading: Stack(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: (isGroup ? palette.accent : palette.success).withOpacity(0.1),
+                                    border: Border.all(
+                                      color: (isGroup ? palette.accent : palette.success).withOpacity(0.3),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      isGroup ? "👥" : "🦊",
+                                      style: const TextStyle(fontSize: 22),
+                                    ),
+                                  ),
+                                ),
+                                if (!isGroup)
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: palette.success,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: palette.card, width: 2.0),
+                                      ),
+                                    ),
+                                  )
+                              ],
                             ),
-                            title: Text(
-                              sos.content,
-                              style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textColorPrimary),
+                            title: Row(
+                              children: [
+                                Text(
+                                  chat.name,
+                                  style: GoogleFonts.poppins(
+                                    color: palette.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                if (!isGroup && isVerified) ...[
+                                  const SizedBox(width: 6),
+                                  Icon(Icons.verified_rounded, color: palette.success, size: 16),
+                                ],
+                              ],
                             ),
                             subtitle: Padding(
                               padding: const EdgeInsets.only(top: 4.0),
                               child: Text(
-                                "From: Peer ${sos.senderId.substring(0, 6)} • ${sos.timestamp.toLocal().toString().substring(11, 16)}",
-                                style: const TextStyle(color: AppTheme.textColorSecondary, fontSize: 11),
+                                isGroup ? 'Active Relay Channel' : 'Secure Point-to-Point Node',
+                                style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
                               ),
                             ),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '20:41',
+                                  style: GoogleFonts.inter(color: palette.textSecondary.withOpacity(0.7), fontSize: 10),
+                                ),
+                                const SizedBox(height: 6),
+                                if (index == 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: palette.accent,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text(
+                                      '2',
+                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  )
+                              ],
+                            ),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                PageRouteBuilder(
+                                  pageBuilder: (_, __, ___) => ChatDetailsScreen(chatId: chat.chatId, chatName: chat.name),
+                                  transitionsBuilder: (_, animation, __, child) {
+                                    return SlideTransition(
+                                      position: Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(
+                                        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                                      ),
+                                      child: child,
+                                    );
+                                  },
+                                  transitionDuration: const Duration(milliseconds: 300),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(ThemePalette palette) {
+    return Container(
+      decoration: AppTheme.glassCardDecoration(
+        color: palette.secondary.withOpacity(0.6),
+        borderRadius: 12,
+        borderColor: palette.border.withOpacity(0.15),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (val) {
+          setState(() {});
+        },
+        style: TextStyle(color: palette.textPrimary, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: "Search terminals...",
+          hintStyle: TextStyle(color: palette.textSecondary.withOpacity(0.6)),
+          prefixIcon: Icon(Icons.search_rounded, color: palette.textSecondary),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemePalette palette) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: palette.secondary,
+            ),
+            child: Icon(Icons.chat_bubble_outline_rounded, size: 44, color: palette.textSecondary.withOpacity(0.5)),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "No Terminal Links Found",
+            style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Go to the Discover tab to connect to nearby nodes.",
+            style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- DISCOVER TAB ---
+class _DiscoverTab extends ConsumerWidget {
+  const _DiscoverTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final discoveredPeers = ref.watch(discoveredPeersProvider);
+    final palette = ThemeManager.currentTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          // Interactive Launch Simulation Card
+          Card(
+            color: palette.accent.withOpacity(0.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: palette.accent.withOpacity(0.35), width: 1.5),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.hub_rounded, color: palette.accent, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Virtual Mesh Simulator',
+                        style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.bold, color: palette.textPrimary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Test packet traces, node relocations, and routing hop algorithms on a virtual 2D terminal grid map.',
+                    style: GoogleFonts.inter(fontSize: 12, color: palette.textSecondary, height: 1.45),
+                  ),
+                  const SizedBox(height: 16),
+                  AnimatedPress(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const Scaffold(
+                          body: MeshSimulatorView(),
+                        )),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.premiumBlueGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'LAUNCH SIMULATION BOARD',
+                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Discover peer list title
+          Text(
+            'NEARBY ACTIVE BEACONS',
+            style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w800, color: palette.textSecondary, letterSpacing: 1.5),
+          ),
+          const SizedBox(height: 10),
+
+          // Real-time discovered list
+          Expanded(
+            child: discoveredPeers.when(
+              data: (peers) {
+                if (peers.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Listening for BLE beacons...',
+                          style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: peers.length,
+                  itemBuilder: (context, index) {
+                    final peer = peers[index];
+                    return Card(
+                      color: palette.card,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: palette.border.withOpacity(0.15)),
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: palette.secondary,
+                          child: Text(peer.profilePicture.isNotEmpty ? peer.profilePicture : '🦊'),
+                        ),
+                        title: Text(
+                          peer.name,
+                          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, color: palette.textPrimary),
+                        ),
+                        subtitle: Text(
+                          'RSSI: -${60 + (peer.deviceId.hashCode % 20)} dBm • Secure Handshake Ready',
+                          style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
+                        ),
+                        trailing: Icon(Icons.link_rounded, color: palette.accent),
+                        onTap: () {
+                          // Start pairing
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Establishing security handshake with ${peer.name}...')),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+              error: (e, s) => Center(child: Text('Error: $e')),
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- PROFILE & SETTINGS TAB ---
+class _ProfileTab extends ConsumerWidget {
+  const _ProfileTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider);
+    final palette = ThemeManager.currentTheme;
+
+    if (profile == null) return const SizedBox();
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Profile Banner Card
+          Card(
+            color: palette.card,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: palette.border.withOpacity(0.15)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundColor: palette.secondary,
+                    child: Text(profile.profilePicture.isNotEmpty ? profile.profilePicture : '🚀', style: const TextStyle(fontSize: 38)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.name,
+                          style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.bold, color: palette.textPrimary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "ID: ${profile.userId.substring(0, 16)}...",
+                          style: TextStyle(fontFamily: 'monospace', color: palette.textSecondary, fontSize: 11),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: palette.success.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            "STATUS: Listening...",
+                            style: GoogleFonts.spaceGrotesk(color: palette.success, fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Visual Theme Switcher swatches
+          Text(
+            'VISUAL INTERFACE THEME',
+            style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w800, color: palette.textSecondary, letterSpacing: 1.5),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 70,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              children: ThemeManager.themes.values.map((theme) {
+                final isSelected = theme.id == palette.id;
+                return AnimatedPress(
+                  onTap: () {
+                    ref.read(themePaletteProvider.notifier).changeTheme(theme.id);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: theme.background,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? theme.accent : theme.border.withOpacity(0.2),
+                        width: isSelected ? 3.0 : 1.5,
+                      ),
+                      boxShadow: isSelected ? [
+                        BoxShadow(color: theme.accent.withOpacity(0.4), blurRadius: 10)
+                      ] : [],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.accent,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Settings Categories
+          Text(
+            'UTILITIES & MAINTENANCE',
+            style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w800, color: palette.textSecondary, letterSpacing: 1.5),
+          ),
+          const SizedBox(height: 12),
+          const SettingsScreen(),
+        ],
       ),
     );
   }
