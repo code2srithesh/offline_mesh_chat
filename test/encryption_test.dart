@@ -24,9 +24,26 @@ void main() {
 
       final cipherText = service.encryptWithPublicKey(plainText, pubKey);
       expect(cipherText, isNot(equals(plainText)));
+      expect(cipherText, startsWith("HYBRID:"));
 
       final decryptedText = service.decryptWithPrivateKey(cipherText, privKey);
       expect(decryptedText, equals(plainText));
+    });
+
+    test('Hybrid Encryption for Large Data Payloads (e.g. Images/Files)', () {
+      final pair = service.generateKeyPair();
+      final pubKey = pair['publicKey']!;
+      final privKey = pair['privateKey']!;
+      
+      // Construct a large simulated payload (approx 200 KB)
+      final largePayload = "BASE64_IMAGE_DATA_" * 10000;
+      
+      final cipherText = service.encryptWithPublicKey(largePayload, pubKey);
+      expect(cipherText, isNot(equals(largePayload)));
+      expect(cipherText, startsWith("HYBRID:"));
+      
+      final decryptedText = service.decryptWithPrivateKey(cipherText, privKey);
+      expect(decryptedText, equals(largePayload));
     });
   });
 }

@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
 import '../../data/models/storage_models.dart';
 import '../../core/theme/app_theme.dart';
+import '../widgets/avatar_view.dart';
 import 'chat_details_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/mesh_simulator_view.dart';
@@ -519,6 +522,8 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
                       final chat = filteredList[index];
                       final isGroup = chat.type == 'group';
                       final isVerified = verifiedUsers.contains(chat.chatId);
+                      final peerUser = isGroup ? null : ref.watch(storageServiceProvider).getUser(chat.chatId);
+                      final avatarString = isGroup ? "👥" : (peerUser?.profilePicture ?? "🦊");
                       
                       return Dismissible(
                         key: Key(chat.chatId),
@@ -551,23 +556,12 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             leading: Stack(
                               children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: (isGroup ? palette.accent : palette.success).withOpacity(0.1),
-                                    border: Border.all(
-                                      color: (isGroup ? palette.accent : palette.success).withOpacity(0.3),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      isGroup ? "👥" : "🦊",
-                                      style: const TextStyle(fontSize: 22),
-                                    ),
-                                  ),
+                                AvatarView(
+                                  avatar: avatarString,
+                                  size: 48,
+                                  fontSize: 22,
+                                  borderColor: (isGroup ? palette.accent : palette.success).withOpacity(0.3),
+                                  backgroundColor: palette.secondary,
                                 ),
                                 if (!isGroup)
                                   Positioned(
@@ -881,9 +875,12 @@ class _DiscoverTab extends ConsumerWidget {
                         side: BorderSide(color: palette.border.withOpacity(0.15)),
                       ),
                       child: ListTile(
-                        leading: CircleAvatar(
+                        leading: AvatarView(
+                          avatar: peer.profilePicture,
+                          size: 40,
+                          fontSize: 18,
+                          borderColor: palette.accent.withOpacity(0.3),
                           backgroundColor: palette.secondary,
-                          child: Text(peer.profilePicture.isNotEmpty ? peer.profilePicture : '🦊'),
                         ),
                         title: Text(
                           peer.name,
@@ -938,10 +935,12 @@ class _ProfileTab extends ConsumerWidget {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 36,
+                  AvatarView(
+                    avatar: profile.profilePicture,
+                    size: 72,
+                    fontSize: 36,
+                    borderColor: palette.accent,
                     backgroundColor: palette.secondary,
-                    child: Text(profile.profilePicture.isNotEmpty ? profile.profilePicture : '🚀', style: const TextStyle(fontSize: 38)),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -971,7 +970,11 @@ class _ProfileTab extends ConsumerWidget {
                         )
                       ],
                     ),
-                  )
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.edit_rounded, color: palette.accent),
+                    onPressed: () => _showEditProfileSheet(context, ref, profile),
+                  ),
                 ],
               ),
             ),
@@ -1037,6 +1040,296 @@ class _ProfileTab extends ConsumerWidget {
           const SettingsScreen(),
         ],
       ),
+    );
+  }
+
+  void _showEditProfileSheet(BuildContext context, WidgetRef ref, UserModel profile) {
+    final palette = ThemeManager.currentTheme;
+    final nameController = TextEditingController(text: profile.name);
+    String currentAvatar = profile.profilePicture;
+    final List<String> avatarEmojis = ["🚀", "🦊", "👾", "🤖", "🐼", "🦁", "🦖", "🦄", "🛰️", "🛸", "⚡", "🔮"];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setInnerState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 30,
+              ),
+              decoration: BoxDecoration(
+                color: palette.secondary.withOpacity(0.95),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: palette.border.withOpacity(0.2), width: 1.5),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Edit Profile settings",
+                          style: GoogleFonts.spaceGrotesk(
+                            color: palette.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, color: palette.textSecondary),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Stack(
+                        children: [
+                          AvatarView(
+                            avatar: currentAvatar,
+                            size: 84,
+                            fontSize: 44,
+                            borderColor: palette.accent,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () async {
+                                final picked = await ImagePicker().pickImage(
+                                  source: ImageSource.gallery,
+                                  maxWidth: 300,
+                                  maxHeight: 300,
+                                  imageQuality: 80,
+                                );
+                                if (picked != null) {
+                                  final bytes = await picked.readAsBytes();
+                                  final base64String = base64Encode(bytes);
+                                  setInnerState(() {
+                                    currentAvatar = base64String;
+                                  });
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: palette.accent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: palette.secondary, width: 2),
+                                ),
+                                child: const Icon(
+                                  Icons.photo_camera_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "CHOOSE AN EMOJI AVATAR",
+                      style: GoogleFonts.spaceGrotesk(
+                        color: palette.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 52,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: avatarEmojis.length,
+                        itemBuilder: (context, index) {
+                          final emoji = avatarEmojis[index];
+                          final isSelected = currentAvatar == emoji;
+                          return GestureDetector(
+                            onTap: () {
+                              setInnerState(() {
+                                currentAvatar = emoji;
+                              });
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: isSelected ? palette.accent.withOpacity(0.2) : Colors.transparent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected ? palette.accent : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  emoji,
+                                  style: const TextStyle(fontSize: 24),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "DISPLAY NAME",
+                      style: GoogleFonts.spaceGrotesk(
+                        color: palette.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: AppTheme.glassCardDecoration(
+                        color: palette.background.withOpacity(0.5),
+                        borderRadius: 12,
+                      ),
+                      child: TextField(
+                        controller: nameController,
+                        style: TextStyle(color: palette.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: "Enter name...",
+                          hintStyle: TextStyle(color: palette.textSecondary.withOpacity(0.5)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "SECURITY KEYPAIR",
+                      style: GoogleFonts.spaceGrotesk(
+                        color: palette.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        "Rotate Encryption Keys",
+                        style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        "Generate new RSA pair. Invalidates older chat logs.",
+                        style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 11),
+                      ),
+                      trailing: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: palette.error.withOpacity(0.2),
+                          side: BorderSide(color: palette.error.withOpacity(0.5)),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => _confirmRotateKeys(context, ref),
+                        child: Text("ROTATE", style: TextStyle(color: palette.error, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: palette.accent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          final name = nameController.text.trim();
+                          if (name.isNotEmpty) {
+                            await ref.read(profileProvider.notifier).updateProfile(name, currentAvatar);
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Profile updated successfully!"),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: Text(
+                          "SAVE CHANGES",
+                          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _confirmRotateKeys(BuildContext context, WidgetRef ref) {
+    final palette = ThemeManager.currentTheme;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: palette.secondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: palette.border.withOpacity(0.3)),
+          ),
+          title: Text(
+            "Rotate Keys?",
+            style: GoogleFonts.spaceGrotesk(color: palette.error, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "WARNING: Generating a new cryptographic keypair will render all previous E2E encrypted messages in your chats unreadable. Peers will need to fetch your new public key to message you safely.\n\nDo you wish to proceed?",
+            style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("CANCEL", style: TextStyle(color: palette.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: palette.error),
+              onPressed: () async {
+                await ref.read(profileProvider.notifier).resetKeys();
+                if (context.mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Close sheet
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text("RSA security keys rotated successfully!"),
+                      backgroundColor: palette.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text("ROTATE KEYS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

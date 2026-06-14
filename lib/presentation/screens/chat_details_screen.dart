@@ -19,6 +19,10 @@ import '../../data/models/storage_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/security/encryption_service.dart';
 import '../../data/services/audio_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import '../widgets/avatar_view.dart';
 
 
 class ChatDetailsScreen extends ConsumerStatefulWidget {
@@ -86,7 +90,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     ref.read(messagesProvider(widget.chatId).notifier).sendTextMessage(
       text,
       replyToId: _replyingToMessage?.messageId,
-      replyToContent: _replyingToMessage?.content,
+      replyToContent: _summarizeMessage(_replyingToMessage),
     );
     
     _messageController.clear();
@@ -96,24 +100,230 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
     _scrollToBottom();
   }
 
-  void _sendMockAttachment(String type) {
+  String _summarizeMessage(MessageModel? message) {
+    if (message == null) return '';
+    if (message.messageType == 'text') {
+      return message.content;
+    } else if (message.messageType == 'image') {
+      try {
+        final data = json.decode(message.content) as Map<String, dynamic>;
+        return "📷 Photo: ${data['fileName'] ?? 'photo.jpg'}";
+      } catch (_) {
+        return "📷 Photo Attachment";
+      }
+    } else if (message.messageType == 'document') {
+      try {
+        final data = json.decode(message.content) as Map<String, dynamic>;
+        return "📄 Document: ${data['fileName'] ?? 'document.pdf'}";
+      } catch (_) {
+        return "📄 Document Attachment";
+      }
+    } else if (message.messageType == 'audio') {
+      return "🎵 Voice Note";
+    } else if (message.messageType == 'location') {
+      return "📍 Location Share";
+    } else if (message.messageType == 'sos') {
+      return "🚨 Emergency SOS";
+    }
+    return 'Attachment';
+  }
+
+  void _sendAttachment(String type) async {
     Navigator.of(context).pop(); // Close sheet
 
     if (type == 'image') {
-      ref.read(messagesProvider(widget.chatId).notifier).sendMediaMessage(
-        'assets/images/mock_mesh_photo.png',
-        'image',
-      );
+      try {
+        final picked = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 600,
+          maxHeight: 600,
+          imageQuality: 75,
+        );
+        if (picked != null) {
+          final file = File(picked.path);
+          final size = await file.length();
+          
+          if (size > 500 * 1024) {
+            _showOversizedWarning();
+            return;
+          }
+          
+          final appDir = await getApplicationDocumentsDirectory();
+          final localFileName = 'img_${DateTime.now().millisecondsSinceEpoch}_${picked.name}';
+          final localPath = '${appDir.path}/$localFileName';
+          await file.copy(localPath);
+          
+          final bytes = await file.readAsBytes();
+          final base64String = base64Encode(bytes);
+          
+          final payload = json.encode({
+            'fileName': picked.name,
+            'fileSize': size,
+            'base64Data': base64String,
+            'localPath': localPath,
+          });
+          
+          await ref.read(messagesProvider(widget.chatId).notifier).sendMediaMessage(
+            payload,
+            'image',
+            replyToId: _replyingToMessage?.messageId,
+            replyToContent: _summarizeMessage(_replyingToMessage),
+          );
+          
+          setState(() {
+            _replyingToMessage = null;
+          });
+          _scrollToBottom();
+        }
+      } catch (e) {
+        print("Error picking photo: $e");
+      }
     } else if (type == 'pdf') {
-      ref.read(messagesProvider(widget.chatId).notifier).sendMediaMessage(
-        'documents/lecture_notes_3.pdf',
-        'document',
-      );
+      try {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+        );
+        if (result != null && result.files.single.path != null) {
+          final pickedFile = result.files.single;
+          final file = File(pickedFile.path!);
+          final size = await file.length();
+          
+          if (size > 500 * 1024) {
+            _showOversizedWarning();
+            return;
+          }
+          
+          final appDir = await getApplicationDocumentsDirectory();
+          final localFileName = 'doc_${DateTime.now().millisecondsSinceEpoch}_${pickedFile.name}';
+          final localPath = '${appDir.path}/$localFileName';
+          await file.copy(localPath);
+          
+          final bytes = await file.readAsBytes();
+          final base64String = base64Encode(bytes);
+          
+          final payload = json.encode({
+            'fileName': pickedFile.name,
+            'fileSize': size,
+            'base64Data': base64String,
+            'localPath': localPath,
+          });
+          
+          await ref.read(messagesProvider(widget.chatId).notifier).sendMediaMessage(
+            payload,
+            'document',
+            replyToId: _replyingToMessage?.messageId,
+            replyToContent: _summarizeMessage(_replyingToMessage),
+          );
+          
+          setState(() {
+            _replyingToMessage = null;
+          });
+          _scrollToBottom();
+        }
+      } catch (e) {
+        print("Error picking file: $e");
+      }
     } else if (type == 'location') {
       _pickLocation();
     } else if (type == 'voice') {
       _startRecording();
     }
+  }
+
+  void _showOversizedWarning() {
+    final palette = ThemeManager.currentTheme;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: palette.secondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: palette.border.withOpacity(0.3)),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.warning_rounded, color: palette.accent),
+              const SizedBox(width: 8),
+              Text(
+                "File Too Large",
+                style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            "To maintain mesh network routing stability and avoid Bluetooth transmission timeouts, the offline file size limit is set to 500 KB.\n\nPlease select a smaller file.",
+            style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: palette.accent),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("DISMISS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _shareBase64File(String base64Str, String fileName) async {
+    try {
+      final bytes = base64Decode(base64Str);
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsBytes(bytes);
+      await Share.shareXFiles([XFile(tempFile.path)], text: fileName);
+    } catch (e) {
+      print("Error sharing file: $e");
+    }
+  }
+
+  void _showFullScreenImage(BuildContext context, String base64Str, String fileName) {
+    final bytes = base64Decode(base64Str);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  maxScale: 4.0,
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                left: 16,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black54,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                right: 16,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black54,
+                  child: IconButton(
+                    icon: const Icon(Icons.share, color: Colors.white),
+                    onPressed: () => _shareBase64File(base64Str, fileName),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _pickLocation() async {
@@ -955,7 +1165,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
 
   Widget _buildAttachmentOption(IconData icon, String label, String type, Color color) {
     return GestureDetector(
-      onTap: () => _sendMockAttachment(type),
+      onTap: () => _sendAttachment(type),
       child: Column(
         children: [
           CircleAvatar(
@@ -1129,7 +1339,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                   ),
                 ),
                 Text(
-                  _replyingToMessage!.content,
+                  _summarizeMessage(_replyingToMessage),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
@@ -1636,39 +1846,157 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
         style: TextStyle(color: textColor, fontSize: 14, height: 1.3),
       );
     } else if (message.messageType == 'image') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 150,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: palette.border.withOpacity(0.2)),
+      String? base64Data;
+      String? localPath;
+      String fileName = "photo.jpg";
+      
+      try {
+        final data = json.decode(message.content) as Map<String, dynamic>;
+        base64Data = data['base64Data'] as String?;
+        localPath = data['localPath'] as String?;
+        fileName = data['fileName'] as String? ?? "photo.jpg";
+      } catch (_) {}
+
+      Widget imageWidget;
+      if (base64Data != null) {
+        try {
+          final bytes = base64Decode(base64Data);
+          imageWidget = ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(
+              bytes,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (context, error, stack) => Icon(Icons.broken_image, size: 50, color: secondaryTextColor),
             ),
-            child: Icon(Icons.image_outlined, size: 50, color: secondaryTextColor),
+          );
+        } catch (_) {
+          imageWidget = Icon(Icons.image_outlined, size: 50, color: secondaryTextColor);
+        }
+      } else if (localPath != null && File(localPath).existsSync()) {
+        imageWidget = ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            File(localPath),
+            fit: BoxFit.cover,
+            width: double.infinity,
           ),
-          const SizedBox(height: 6),
-          Text("Photo Attachment", style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-        ],
+        );
+      } else {
+        imageWidget = Icon(Icons.image_outlined, size: 50, color: secondaryTextColor);
+      }
+
+      return GestureDetector(
+        onTap: () {
+          if (base64Data != null) {
+            _showFullScreenImage(context, base64Data, fileName);
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: palette.border.withOpacity(0.2)),
+              ),
+              child: imageWidget,
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: secondaryTextColor, fontSize: 11),
+                  ),
+                ),
+                if (base64Data != null)
+                  GestureDetector(
+                    onTap: () => _shareBase64File(base64Data!, fileName),
+                    child: Icon(Icons.share_rounded, size: 14, color: secondaryTextColor),
+                  ),
+              ],
+            ),
+          ],
+        ),
       );
     } else if (message.messageType == 'document') {
+      String fileName = "document.pdf";
+      int fileSize = 0;
+      String? base64Data;
+      
+      try {
+        final data = json.decode(message.content) as Map<String, dynamic>;
+        fileName = data['fileName'] as String? ?? "document.pdf";
+        fileSize = data['fileSize'] as int? ?? 0;
+        base64Data = data['base64Data'] as String?;
+      } catch (_) {}
+
+      final sizeStr = fileSize > 1024 * 1024
+          ? '${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB'
+          : '${(fileSize / 1024).toStringAsFixed(0)} KB';
+
+      final isPdf = fileName.toLowerCase().endsWith('.pdf');
+
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: palette.border.withOpacity(0.15)),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.picture_as_pdf, color: Colors.redAccent),
-            SizedBox(width: 8),
-            Text(
-              "lecture_notes_3.pdf",
-              style: TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.bold),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (isPdf ? Colors.redAccent : palette.accent).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file_rounded,
+                color: isPdf ? Colors.redAccent : palette.accent,
+                size: 24,
+              ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    sizeStr,
+                    style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (base64Data != null)
+              IconButton(
+                icon: Icon(Icons.share_rounded, color: secondaryTextColor, size: 20),
+                onPressed: () => _shareBase64File(base64Data!, fileName),
+              ),
           ],
         ),
       );

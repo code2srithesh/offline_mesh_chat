@@ -102,6 +102,24 @@ class ProfileNotifier extends StateNotifier<UserModel?> {
     MockCommunicationService().setHostDetails(updated.userId, name, profilePicBase64);
     state = updated;
   }
+
+  Future<void> resetKeys() async {
+    if (state == null) return;
+    final keyPair = _encryption.generateKeyPair();
+    final updated = UserModel(
+      userId: state!.userId,
+      name: state!.name,
+      profilePicture: state!.profilePicture,
+      deviceId: state!.deviceId,
+      publicKey: keyPair['publicKey']!,
+      createdAt: state!.createdAt,
+    );
+    await _storage.saveMyProfile(updated);
+    await _storage.savePrivateKey(keyPair['privateKey']!);
+    // In simulation mode, set the new host details (host maintains same id/name but keys/identity rotate)
+    MockCommunicationService().setHostDetails(updated.userId, updated.name, updated.profilePicture);
+    state = updated;
+  }
 }
 
 final profileProvider = StateNotifierProvider<ProfileNotifier, UserModel?>((ref) {

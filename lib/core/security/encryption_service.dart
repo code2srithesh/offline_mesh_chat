@@ -67,28 +67,52 @@ class EncryptionService {
     return RSAPrivateKey(modulus, privateExponent, p, q);
   }
 
-  /// Encrypts text using RSA Public Key
+  /// Encrypts text using RSA Public Key (with Hybrid AES-256 fallback for large data)
   String encryptWithPublicKey(String plainText, String publicKeyBase64) {
     if (publicKeyBase64.startsWith('mock_')) {
       return plainText; // Bypass encryption for simulator nodes
     }
     try {
+      // Generate a one-time symmetric key
+      final aesKey = generateSymmetricKey();
+      
+      // Encrypt the payload with AES
+      final encryptedPayload = encryptSymmetric(plainText, aesKey);
+      
+      // Encrypt the symmetric key with RSA
       final publicKey = _parsePublicKey(publicKeyBase64);
       final encrypter = enc.Encrypter(enc.RSA(publicKey: publicKey));
-      final encrypted = encrypter.encrypt(plainText);
-      return encrypted.base64;
+      final encryptedKey = encrypter.encrypt(aesKey);
+      
+      // Format: HYBRID:encryptedAESKeyBase64:encryptedPayloadBase64
+      return 'HYBRID:${encryptedKey.base64}:${encryptedPayload}';
     } catch (e) {
       print('Encryption error: $e');
       return plainText; // Fallback or handle error
     }
   }
 
-  /// Decrypts text using RSA Private Key
+  /// Decrypts text using RSA Private Key (with Hybrid AES-256 support)
   String decryptWithPrivateKey(String cipherText, String privateKeyBase64) {
     if (privateKeyBase64.startsWith('mock_')) {
       return cipherText; // Bypass decryption for simulator nodes
     }
     try {
+      if (cipherText.startsWith('HYBRID:')) {
+        final parts = cipherText.split(':');
+        if (parts.length >= 3) {
+          final encKeyBase64 = parts[1];
+          final encPayloadBase64 = parts.sublist(2).join(':'); // Handle any potential colons inside the base64 payload
+          
+          final privateKey = _parsePrivateKey(privateKeyBase64);
+          final encrypter = enc.Encrypter(enc.RSA(privateKey: privateKey));
+          final decryptedKey = encrypter.decrypt(enc.Encrypted.fromBase64(encKeyBase64));
+          
+          return decryptSymmetric(encPayloadBase64, decryptedKey);
+        }
+      }
+      
+      // Fallback to pure RSA if not hybrid-prefixed
       final privateKey = _parsePrivateKey(privateKeyBase64);
       final encrypter = enc.Encrypter(enc.RSA(privateKey: privateKey));
       final decrypted = encrypter.decrypt(enc.Encrypted.fromBase64(cipherText));
