@@ -1124,6 +1124,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   }
 
   void _showAttachmentSheet() {
+    final palette = ThemeManager.currentTheme;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.surfaceColor,

@@ -190,19 +190,19 @@ final verifiedUsersProvider = StateNotifierProvider<VerifiedUsersNotifier, Set<S
 class ThemeNotifier extends StateNotifier<ThemePalette> {
   final StorageService _storage;
 
-  ThemeNotifier(this._storage) : super(ThemeManager.defaultCyber) {
+  ThemeNotifier(this._storage) : super(ThemeManager.luxuryObsidian) {
     _loadTheme();
   }
 
   void _loadTheme() {
     final themeId = _storage.getThemeId();
-    final theme = ThemeManager.themes[themeId] ?? ThemeManager.defaultCyber;
+    final theme = ThemeManager.themes[themeId] ?? ThemeManager.luxuryObsidian;
     ThemeManager.currentTheme = theme;
     state = theme;
   }
 
   Future<void> changeTheme(String themeId) async {
-    final theme = ThemeManager.themes[themeId] ?? ThemeManager.defaultCyber;
+    final theme = ThemeManager.themes[themeId] ?? ThemeManager.luxuryObsidian;
     await _storage.setThemeId(themeId);
     ThemeManager.currentTheme = theme;
     state = theme;
