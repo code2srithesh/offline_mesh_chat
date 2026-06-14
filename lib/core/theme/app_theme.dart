@@ -34,107 +34,107 @@ class ThemePalette {
 }
 
 class ThemeManager {
-  static const ThemePalette defaultCyber = ThemePalette(
+  static const ThemePalette luxuryObsidian = ThemePalette(
     id: 'default',
-    name: 'Aurora Night',
-    background: Color(0xFF050816),
-    secondary: Color(0xFF0D1326),
-    card: Color(0xFF131C33),
-    accent: Color(0xFF6D5DFC),
-    accentLight: Color(0xFF00D9FF),
-    success: Color(0xFF8A7FFF),
-    warning: Color(0xFFFFB020),
-    error: Color(0xFFFF5C5C),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFA8B0C5),
-    border: Color(0x336D5DFC),
-  );
-
-  static const ThemePalette midnightPurple = ThemePalette(
-    id: 'purple',
-    name: 'Cyber Neon',
-    background: Color(0xFF00020A),
-    secondary: Color(0xFF050B1B),
-    card: Color(0xFF09122C),
-    accent: Color(0xFF00F0FF),
-    accentLight: Color(0xFFBD00FF),
-    success: Color(0xFF00FF87),
-    warning: Color(0xFFFFB020),
-    error: Color(0xFFFF5C5C),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFF8E9BB0),
-    border: Color(0x3300F0FF),
-  );
-
-  static const ThemePalette emeraldGreen = ThemePalette(
-    id: 'green',
-    name: 'Midnight Emerald',
-    background: Color(0xFF020B0B),
-    secondary: Color(0xFF061514),
-    card: Color(0xFF0B211E),
-    accent: Color(0xFF00FF87),
-    accentLight: Color(0xFF60EFFF),
-    success: Color(0xFF00FF87),
-    warning: Color(0xFFFFB020),
-    error: Color(0xFFFF5C5C),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFF7FA69E),
-    border: Color(0x3300FF87),
-  );
-
-  static const ThemePalette roseGold = ThemePalette(
-    id: 'rose',
-    name: 'Rose Gold Premium',
-    background: Color(0xFF1B1414),
-    secondary: Color(0xFF291E1E),
-    card: Color(0xFF3D2E2E),
-    accent: Color(0xFFE29578),
-    accentLight: Color(0xFFFFDDD2),
-    success: Color(0xFF00D68F),
-    warning: Color(0xFFFFB020),
-    error: Color(0xFFFF5C5C),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFCDB3BA),
-    border: Color(0x33E29578),
-  );
-
-  static const ThemePalette amoledBlack = ThemePalette(
-    id: 'black',
-    name: 'AMOLED Pure Black',
-    background: Color(0xFF000000),
-    secondary: Color(0xFF080808),
+    name: 'Obsidian Black',
+    background: Color(0xFF050505),
+    secondary: Color(0xFF0B0B0B),
     card: Color(0xFF121212),
     accent: Color(0xFFFFFFFF),
-    accentLight: Color(0xFFB0B0B0),
-    success: Color(0xFF00D68F),
-    warning: Color(0xFFFFB020),
-    error: Color(0xFFFF5C5C),
+    accentLight: Color(0xFFD0D0D0),
+    success: Color(0xFFE5E5E5),
+    warning: Color(0xFF9A9A9A),
+    error: Color(0xFF666666),
     textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFF969696),
-    border: Color(0x33FFFFFF),
+    textSecondary: Color(0xFFD0D0D0),
+    border: Color(0x14FFFFFF), // rgba(255,255,255,0.08)
+  );
+
+  static const ThemePalette graphiteSteel = ThemePalette(
+    id: 'graphite',
+    name: 'Graphite Luxury',
+    background: Color(0xFF0A0A0A),
+    secondary: Color(0xFF111111),
+    card: Color(0xFF181818),
+    accent: Color(0xFFE5E5E5),
+    accentLight: Color(0xFFB0B0B0),
+    success: Color(0xFFD0D0D0),
+    warning: Color(0xFF888888),
+    error: Color(0xFF555555),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFD0D0D0),
+    border: Color(0x1AFFFFFF), // rgba(255,255,255,0.1)
+  );
+
+  static const ThemePalette visionOSGlass = ThemePalette(
+    id: 'vision',
+    name: 'Vision Glass',
+    background: Color(0xFF08080C),
+    secondary: Color(0xFF121216),
+    card: Color(0xFF1A1A22),
+    accent: Color(0xFFFFFFFF),
+    accentLight: Color(0xFFDFDFE2),
+    success: Color(0xFFC0C0C0),
+    warning: Color(0xFF9A9A9A),
+    error: Color(0xFF707070),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFD0D0D0),
+    border: Color(0x1EFFFFFF), // rgba(255,255,255,0.12)
+  );
+
+  static const ThemePalette nothingOS = ThemePalette(
+    id: 'nothing',
+    name: 'Nothing Dot',
+    background: Color(0xFF000000),
+    secondary: Color(0xFF060606),
+    card: Color(0xFF0C0C0C),
+    accent: Color(0xFFFFFFFF),
+    accentLight: Color(0xFF888888),
+    success: Color(0xFFDDDDDD),
+    warning: Color(0xFF777777),
+    error: Color(0xFF333333),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFCCCCCC),
+    border: Color(0x14FFFFFF), // rgba(255,255,255,0.08)
+  );
+
+  static const ThemePalette pureAmoled = ThemePalette(
+    id: 'amoled',
+    name: 'Amoled Lux',
+    background: Color(0xFF000000),
+    secondary: Color(0xFF050505),
+    card: Color(0xFF0B0B0B),
+    accent: Color(0xFFFFFFFF),
+    accentLight: Color(0xFF999999),
+    success: Color(0xFFE5E5E5),
+    warning: Color(0xFF666666),
+    error: Color(0xFF262626),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFCCCCCC),
+    border: Color(0x18FFFFFF), // rgba(255,255,255,0.09)
   );
 
   static const Map<String, ThemePalette> themes = {
-    'default': defaultCyber,
-    'purple': midnightPurple,
-    'green': emeraldGreen,
-    'rose': roseGold,
-    'black': amoledBlack,
+    'default': luxuryObsidian,
+    'graphite': graphiteSteel,
+    'vision': visionOSGlass,
+    'nothing': nothingOS,
+    'amoled': pureAmoled,
   };
 
-  static ThemePalette currentTheme = defaultCyber;
+  static ThemePalette currentTheme = luxuryObsidian;
 }
 
 class AppTheme {
-  // Static getters routing to active ThemeManager config for absolute backwards compatibility
+  // Static getters routing to active ThemePalette configurations
   static Color get obsidianBackground => ThemeManager.currentTheme.background;
   static Color get surfaceColor => ThemeManager.currentTheme.secondary;
   static Color get cardColor => ThemeManager.currentTheme.card;
   static Color get borderLight => ThemeManager.currentTheme.border;
 
-  // Accents matching the design system
-  static Color get mintGreen => ThemeManager.currentTheme.success;
-  static Color get mintGreenLight => ThemeManager.currentTheme.success.withOpacity(0.8);
+  // Accents mapped directly to monochrome palette states
+  static Color get mintGreen => ThemeManager.currentTheme.accent;
+  static Color get mintGreenLight => ThemeManager.currentTheme.accentLight.withOpacity(0.8);
   static Color get electricBlue => ThemeManager.currentTheme.accent;
   static Color get electricBlueLight => ThemeManager.currentTheme.accentLight;
   static Color get crimsonRed => ThemeManager.currentTheme.error;
@@ -145,7 +145,7 @@ class AppTheme {
   static Color get textColorPrimary => ThemeManager.currentTheme.textPrimary;
   static Color get textColorSecondary => ThemeManager.currentTheme.textSecondary;
 
-  // Adaptable glassmorphism styles
+  // Pure glassmorphic styling (frosted glass layers, subtle borders, shadows replaced by glow)
   static BoxDecoration glassCardDecoration({
     Color? color,
     double borderRadius = 16,
@@ -154,23 +154,23 @@ class AppTheme {
   }) {
     final palette = ThemeManager.currentTheme;
     return BoxDecoration(
-      color: color ?? palette.card.withOpacity(0.65),
+      color: color ?? Colors.white.withOpacity(0.04), // rgba(255,255,255,0.04)
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(
-        color: borderColor ?? palette.border.withOpacity(0.2),
+        color: borderColor ?? Colors.white.withOpacity(0.08), // rgba(255,255,255,0.08)
         width: borderWidth,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.3),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
+          color: Colors.black.withOpacity(0.2), // Soft ambient depth glow
+          blurRadius: 30,
+          offset: const Offset(0, 10),
         )
       ],
     );
   }
 
-  // Adaptive Gradients
+  // Grayscale Gradients
   static LinearGradient get premiumBlueGradient {
     final palette = ThemeManager.currentTheme;
     return LinearGradient(
@@ -183,7 +183,7 @@ class AppTheme {
   static LinearGradient get premiumGreenGradient {
     final palette = ThemeManager.currentTheme;
     return LinearGradient(
-      colors: [palette.success, palette.accent],
+      colors: [palette.accent, palette.accentLight],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -192,7 +192,7 @@ class AppTheme {
   static LinearGradient get premiumRedGradient {
     final palette = ThemeManager.currentTheme;
     return LinearGradient(
-      colors: [palette.error, palette.error.withOpacity(0.7)],
+      colors: [palette.accentLight, palette.error],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -216,7 +216,7 @@ class AppTheme {
     );
   }
 
-  // Dynamic Theme Builder
+  // Dynamic Theme Builder using luxurious lighter typography styles
   static ThemeData get darkTheme {
     final palette = ThemeManager.currentTheme;
     return ThemeData(
@@ -238,7 +238,7 @@ class AppTheme {
         titleTextStyle: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
           fontSize: 22,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w500, // Elegant lighter weights
           letterSpacing: -0.5,
         ),
         iconTheme: IconThemeData(color: palette.textPrimary),
@@ -248,53 +248,55 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: palette.border.withOpacity(0.25), width: 1),
+          side: BorderSide(color: palette.border, width: 1),
         ),
       ),
       textTheme: TextTheme(
-        // Display (48px)
+        // Large Display / Neue Montreal
         displayLarge: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
           fontSize: 48,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -1.0,
+          fontWeight: FontWeight.w300, // Luxurious thin look
+          letterSpacing: -1.5,
         ),
-        // Hero (40px)
+        // Hero title
         displayMedium: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
           fontSize: 40,
-          fontWeight: FontWeight.bold,
-          letterSpacing: -0.8,
+          fontWeight: FontWeight.w400,
+          letterSpacing: -1.0,
         ),
         // Title (28px)
         titleLarge: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
           fontSize: 28,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w500,
           letterSpacing: -0.5,
         ),
         // Section (22px)
         titleMedium: GoogleFonts.spaceGrotesk(
           color: palette.textPrimary,
           fontSize: 22,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w500,
         ),
         // Subtitle (18px)
         titleSmall: GoogleFonts.inter(
           color: palette.textSecondary,
           fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
         // Body (15-16px)
         bodyLarge: GoogleFonts.inter(
           color: palette.textPrimary,
           fontSize: 16,
           height: 1.45,
+          fontWeight: FontWeight.w400,
           letterSpacing: 0.1,
         ),
         bodyMedium: GoogleFonts.inter(
           color: palette.textSecondary,
           fontSize: 14,
+          fontWeight: FontWeight.w400,
           height: 1.4,
         ),
         // Caption (12-13px)
@@ -309,7 +311,7 @@ class AppTheme {
   }
 }
 
-// Tactical animated press feedback for high fidelity micro-interactions
+// Micro-interactions class for luxury haptics / spring scale compression
 class AnimatedPress extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
@@ -333,9 +335,9 @@ class _AnimatedPressState extends State<AnimatedPress> with SingleTickerProvider
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 150), // responsive spring speed
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.94).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
   }

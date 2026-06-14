@@ -1149,10 +1149,10 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildAttachmentOption(Icons.image, "Photo", 'image', Colors.teal),
-                    _buildAttachmentOption(Icons.picture_as_pdf, "Document", 'pdf', Colors.red),
-                    _buildAttachmentOption(Icons.location_on, "Location", 'location', Colors.green),
-                    _buildAttachmentOption(Icons.mic, "Voice", 'voice', Colors.orange),
+                    _buildAttachmentOption(Icons.image, "Photo", 'image', palette.accentLight),
+                    _buildAttachmentOption(Icons.picture_as_pdf, "Document", 'pdf', palette.textSecondary),
+                    _buildAttachmentOption(Icons.location_on, "Location", 'location', palette.warning),
+                    _buildAttachmentOption(Icons.mic, "Voice", 'voice', palette.success),
                   ],
                 ),
               ],
@@ -1585,57 +1585,46 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
 
     final bubbleDecoration = isMe
         ? BoxDecoration(
-            gradient: LinearGradient(
-              colors: [palette.accent, palette.accentLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white.withOpacity(0.08),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(4),
             ),
-            border: Border.all(color: palette.accentLight.withOpacity(0.35), width: 0.5),
+            border: Border.all(color: Colors.white.withOpacity(0.12), width: 0.8),
             boxShadow: [
               BoxShadow(
-                color: palette.id == 'black' 
-                    ? Colors.white.withOpacity(0.1) 
-                    : palette.accent.withOpacity(0.35),
-                blurRadius: 12,
-                spreadRadius: 1,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               )
             ],
           )
         : BoxDecoration(
-            color: palette.card.withOpacity(0.75),
+            color: Colors.white.withOpacity(0.04),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
               bottomLeft: Radius.circular(4),
               bottomRight: Radius.circular(20),
             ),
-            border: Border.all(color: palette.border.withOpacity(0.15), width: 0.5),
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 0.8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withOpacity(0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               )
             ],
           );
 
-    final bubbleTextColor = isMe
-        ? (palette.id == 'black' ? Colors.black : Colors.white)
-        : palette.textPrimary;
-    final bubbleSecondaryTextColor = isMe
-        ? (palette.id == 'black' ? Colors.black54 : Colors.white70)
-        : palette.textSecondary;
+    final bubbleTextColor = palette.textPrimary;
+    final bubbleSecondaryTextColor = palette.textSecondary;
     final ticksColor = isMe
         ? (message.status == 'read'
-            ? (palette.id == 'black' ? palette.accent : palette.success)
-            : (palette.id == 'black' ? Colors.black45 : Colors.white54))
+            ? palette.accentLight
+            : Colors.white30)
         : palette.textSecondary;
 
     final replyHeader = (message.replyToId == null)
@@ -1957,12 +1946,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: (isPdf ? Colors.redAccent : palette.accent).withOpacity(0.15),
+                color: palette.accent.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file_rounded,
-                color: isPdf ? Colors.redAccent : palette.accent,
+                color: palette.accent,
                 size: 24,
               ),
             ),

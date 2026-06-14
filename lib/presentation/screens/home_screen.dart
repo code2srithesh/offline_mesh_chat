@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/chat_providers.dart';
 import '../../data/models/storage_models.dart';
+import '../../data/services/communication_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../widgets/avatar_view.dart';
 import 'chat_details_screen.dart';

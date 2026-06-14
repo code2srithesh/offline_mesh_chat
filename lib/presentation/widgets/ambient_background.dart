@@ -118,7 +118,7 @@ class _AmbientBackgroundPainter extends CustomPainter {
     // 2. Draw drifting ambient blur blobs
     final double baseRadius = min(size.width, size.height) * 0.6;
     
-    // Blob 1: Top-Right drifting primary/purple glow
+    // Blob 1: Top-Right drifting soft silver/white light sweep
     final double blob1Angle = progress * 2 * pi;
     final double blob1X = size.width * 0.75 + cos(blob1Angle) * 60;
     final double blob1Y = size.height * 0.2 + sin(blob1Angle) * 80;
@@ -126,14 +126,14 @@ class _AmbientBackgroundPainter extends CustomPainter {
     final blob1Paint = Paint()
       ..shader = RadialGradient(
         colors: [
-          palette.accent.withOpacity(0.25),
-          palette.accent.withOpacity(0.08),
+          Colors.white.withOpacity(0.06), // extremely subtle white light sweep
+          Colors.white.withOpacity(0.01),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(center: blob1Center, radius: baseRadius));
     canvas.drawCircle(blob1Center, baseRadius, blob1Paint);
 
-    // Blob 2: Bottom-Left drifting secondary/cyan/accentLight glow
+    // Blob 2: Bottom-Left drifting graphite/grey soft glow
     final double blob2Angle = (progress + 0.5) * 2 * pi;
     final double blob2X = size.width * 0.25 + cos(blob2Angle) * 80;
     final double blob2Y = size.height * 0.8 + sin(blob2Angle) * 60;
@@ -141,21 +141,21 @@ class _AmbientBackgroundPainter extends CustomPainter {
     final blob2Paint = Paint()
       ..shader = RadialGradient(
         colors: [
-          palette.accentLight.withOpacity(0.2),
-          palette.accentLight.withOpacity(0.05),
+          palette.accentLight.withOpacity(0.04), // soft desaturated secondary sweep
+          palette.accentLight.withOpacity(0.005),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(center: blob2Center, radius: baseRadius * 1.2));
     canvas.drawCircle(blob2Center, baseRadius * 1.2, blob2Paint);
 
-    // 3. Draw upward floating particles
+    // 3. Draw upward floating particles (subtle micro-dust specks)
     for (var particle in particles) {
       double drawY = (particle.y - progress * particle.speed) % 1.0;
       double drawX = particle.x;
 
       final position = Offset(drawX * size.width, drawY * size.height);
-      paint.color = palette.accentLight.withOpacity(particle.opacity);
-      canvas.drawCircle(position, particle.radius, paint);
+      paint.color = Colors.white.withOpacity(particle.opacity * 0.18); // very subtle luxury dust specks
+      canvas.drawCircle(position, particle.radius * 0.8, paint);
     }
   }
 

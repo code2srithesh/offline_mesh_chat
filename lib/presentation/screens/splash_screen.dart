@@ -320,7 +320,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
                                   'OfflineMesh',
                                   style: GoogleFonts.spaceGrotesk(
                                     fontSize: 42,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w500, // Luxurious lighter weight
                                     letterSpacing: -1.0,
                                     color: Colors.white,
                                   ),
@@ -338,7 +338,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
                                 fontSize: 11,
                                 color: palette.textSecondary.withOpacity(0.7),
                                 letterSpacing: 3.0,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w500, // Luxurious lighter weight
                               ),
                             ),
                           ),

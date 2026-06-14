@@ -269,10 +269,9 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
           child: Container(
             margin: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF04060A),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderLight),
+            decoration: AppTheme.glassCardDecoration(
+              color: palette.secondary.withOpacity(0.4),
+              borderRadius: 16,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,21 +306,21 @@ class _MeshSimulatorViewState extends ConsumerState<MeshSimulatorView> with Tick
                     children: [
                       Text(
                         simLogs.isNotEmpty ? simLogs : "Waiting for simulator packets...",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 11,
                           height: 1.4,
-                          color: Color(0xFF34D399),
+                          color: palette.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         routingLogs.isNotEmpty ? routingLogs : "",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 11,
                           height: 1.4,
-                          color: Color(0xFF60A5FA),
+                          color: palette.warning,
                         ),
                       ),
                     ],
