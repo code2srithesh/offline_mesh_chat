@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/app_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/mesh_simulator_view.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -71,6 +72,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
               ),
+              if (isSimMode) ...[
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                ListTile(
+                  leading: Icon(Icons.hub_rounded, color: palette.accent),
+                  title: Text(
+                    "Launch Simulation Map",
+                    style: GoogleFonts.inter(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    "Open the interactive 2D node map simulator.",
+                    style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
+                  ),
+                  trailing: Icon(Icons.chevron_right_rounded, color: palette.textSecondary),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const Scaffold(
+                        body: MeshSimulatorView(),
+                      )),
+                    );
+                  },
+                ),
+              ],
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 leading: Icon(Icons.vpn_key_rounded, color: palette.textSecondary),

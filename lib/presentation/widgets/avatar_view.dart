@@ -20,12 +20,40 @@ class AvatarView extends StatelessWidget {
     this.backgroundColor,
   });
 
+  bool _isEmoji(String str) {
+    if (str.isEmpty) return false;
+    final containsAlphanumeric = RegExp(r'[a-zA-Z0-9]').hasMatch(str);
+    return !containsAlphanumeric;
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = ThemeManager.currentTheme;
     final isBase64 = avatar.length > 8;
     final displayBorderColor = borderColor ?? palette.border.withOpacity(0.3);
     final displayBgColor = backgroundColor ?? palette.secondary.withOpacity(0.4);
+
+    Widget avatarWidget;
+    if (isBase64) {
+      avatarWidget = _buildBase64Image(avatar);
+    } else if (_isEmoji(avatar)) {
+      avatarWidget = _buildEmojiText(avatar.isNotEmpty ? avatar : '👤');
+    } else {
+      final cleanText = avatar.trim();
+      final initial = cleanText.isNotEmpty
+          ? (cleanText.startsWith('avatar_') ? cleanText.substring(7, 8).toUpperCase() : cleanText[0].toUpperCase())
+          : '👤';
+      avatarWidget = Center(
+        child: Text(
+          initial,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            color: palette.textPrimary,
+          ),
+        ),
+      );
+    }
 
     return Container(
       width: size,
@@ -39,9 +67,7 @@ class AvatarView extends StatelessWidget {
         ),
       ),
       child: ClipOval(
-        child: isBase64
-            ? _buildBase64Image(avatar)
-            : _buildEmojiText(avatar.isNotEmpty ? avatar : '👤'),
+        child: avatarWidget,
       ),
     );
   }

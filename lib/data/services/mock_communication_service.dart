@@ -66,9 +66,9 @@ class MockCommunicationService implements CommunicationService {
   MockCommunicationService._internal() {
     // Add default mock nodes for campus scenario
     nodes.addAll([
-      SimulatedNode(deviceId: 'node-b', name: 'Bob (Classroom A)', profilePicture: 'avatar_b', x: 250, y: 120),
-      SimulatedNode(deviceId: 'node-c', name: 'Charlie (Library)', profilePicture: 'avatar_c', x: 380, y: 150),
-      SimulatedNode(deviceId: 'node-d', name: 'Diana (Cafeteria)', profilePicture: 'avatar_d', x: 450, y: 300),
+      SimulatedNode(deviceId: 'node-b', name: 'Bob (Classroom A)', profilePicture: '🦁', x: 250, y: 120),
+      SimulatedNode(deviceId: 'node-c', name: 'Charlie (Library)', profilePicture: '🤖', x: 380, y: 150),
+      SimulatedNode(deviceId: 'node-d', name: 'Diana (Cafeteria)', profilePicture: '🦊', x: 450, y: 300),
     ]);
   }
 

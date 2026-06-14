@@ -24,13 +24,14 @@ class OfflineMeshApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch themePaletteProvider to trigger rebuilds on theme change
-    ref.watch(themePaletteProvider);
+    final themePalette = ref.watch(themePaletteProvider);
+    final isLight = themePalette.id == 'light';
 
     return MaterialApp(
       title: 'OfflineMesh Chat',
       theme: AppTheme.darkTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
       home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );

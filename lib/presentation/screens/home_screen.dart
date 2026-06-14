@@ -809,60 +809,6 @@ class _DiscoverTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 12),
-          // Interactive Launch Simulation Card
-          Card(
-            color: palette.accent.withOpacity(0.08),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: palette.accent.withOpacity(0.35), width: 1.5),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.hub_rounded, color: palette.accent, size: 24),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Virtual Mesh Simulator',
-                        style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.bold, color: palette.textPrimary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Test connection routing and message forwarding on a virtual 2D map.',
-                    style: GoogleFonts.inter(fontSize: 12, color: palette.textSecondary, height: 1.45),
-                  ),
-                  const SizedBox(height: 16),
-                  AnimatedPress(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const Scaffold(
-                          body: MeshSimulatorView(),
-                        )),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.premiumBlueGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'LAUNCH SIMULATION MAP',
-                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          ),
           const SizedBox(height: 20),
 
           // Discover peer list title
@@ -1161,10 +1107,10 @@ class _ProfileTab extends ConsumerWidget {
                                   shape: BoxShape.circle,
                                   border: Border.all(color: palette.secondary, width: 2),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.photo_camera_rounded,
                                   size: 16,
-                                  color: Colors.white,
+                                  color: palette.background,
                                 ),
                               ),
                             ),
@@ -1301,7 +1247,7 @@ class _ProfileTab extends ConsumerWidget {
                         },
                         child: Text(
                           "SAVE CHANGES",
-                          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 14, color: palette.background),
                         ),
                       ),
                     ),

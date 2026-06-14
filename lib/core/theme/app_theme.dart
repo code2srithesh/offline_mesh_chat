@@ -50,76 +50,25 @@ class ThemeManager {
     border: Color(0x14FFFFFF), // rgba(255,255,255,0.08)
   );
 
-  static const ThemePalette graphiteSteel = ThemePalette(
-    id: 'graphite',
-    name: 'Graphite Luxury',
-    background: Color(0xFF0A0A0A),
-    secondary: Color(0xFF111111),
-    card: Color(0xFF181818),
-    accent: Color(0xFFE5E5E5),
-    accentLight: Color(0xFFB0B0B0),
-    success: Color(0xFFD0D0D0),
-    warning: Color(0xFF888888),
-    error: Color(0xFF555555),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFD0D0D0),
-    border: Color(0x1AFFFFFF), // rgba(255,255,255,0.1)
-  );
-
-  static const ThemePalette visionOSGlass = ThemePalette(
-    id: 'vision',
-    name: 'Vision Glass',
-    background: Color(0xFF08080C),
-    secondary: Color(0xFF121216),
-    card: Color(0xFF1A1A22),
-    accent: Color(0xFFFFFFFF),
-    accentLight: Color(0xFFDFDFE2),
-    success: Color(0xFFC0C0C0),
-    warning: Color(0xFF9A9A9A),
-    error: Color(0xFF707070),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFD0D0D0),
-    border: Color(0x1EFFFFFF), // rgba(255,255,255,0.12)
-  );
-
-  static const ThemePalette nothingOS = ThemePalette(
-    id: 'nothing',
-    name: 'Nothing Dot',
-    background: Color(0xFF000000),
-    secondary: Color(0xFF060606),
-    card: Color(0xFF0C0C0C),
-    accent: Color(0xFFFFFFFF),
-    accentLight: Color(0xFF888888),
-    success: Color(0xFFDDDDDD),
-    warning: Color(0xFF777777),
-    error: Color(0xFF333333),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFCCCCCC),
-    border: Color(0x14FFFFFF), // rgba(255,255,255,0.08)
-  );
-
-  static const ThemePalette pureAmoled = ThemePalette(
-    id: 'amoled',
-    name: 'Amoled Lux',
-    background: Color(0xFF000000),
-    secondary: Color(0xFF050505),
-    card: Color(0xFF0B0B0B),
-    accent: Color(0xFFFFFFFF),
-    accentLight: Color(0xFF999999),
-    success: Color(0xFFE5E5E5),
-    warning: Color(0xFF666666),
-    error: Color(0xFF262626),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFCCCCCC),
-    border: Color(0x18FFFFFF), // rgba(255,255,255,0.09)
+  static const ThemePalette alabasterLight = ThemePalette(
+    id: 'light',
+    name: 'Alabaster Light',
+    background: Color(0xFFFAFAFA),
+    secondary: Color(0xFFF2F2F2),
+    card: Color(0xFFFFFFFF),
+    accent: Color(0xFF000000),
+    accentLight: Color(0xFF404040),
+    success: Color(0xFF202020),
+    warning: Color(0xFF606060),
+    error: Color(0xFF808080),
+    textPrimary: Color(0xFF000000),
+    textSecondary: Color(0xFF555555),
+    border: Color(0x1F000000), // rgba(0,0,0,0.12)
   );
 
   static const Map<String, ThemePalette> themes = {
     'default': luxuryObsidian,
-    'graphite': graphiteSteel,
-    'vision': visionOSGlass,
-    'nothing': nothingOS,
-    'amoled': pureAmoled,
+    'light': alabasterLight,
   };
 
   static ThemePalette currentTheme = luxuryObsidian;
@@ -216,21 +165,28 @@ class AppTheme {
     );
   }
 
-  // Dynamic Theme Builder using luxurious lighter typography styles
+  // Dynamic Theme Builder using luxurious typography styles (supports light/dark brightness contrast)
   static ThemeData get darkTheme {
     final palette = ThemeManager.currentTheme;
+    final isLight = palette.id == 'light';
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: isLight ? Brightness.light : Brightness.dark,
       primaryColor: palette.accent,
       scaffoldBackgroundColor: palette.background,
-      colorScheme: ColorScheme.dark(
-        primary: palette.accent,
-        secondary: palette.accentLight,
-        surface: palette.secondary,
-        background: palette.background,
-        error: palette.error,
-      ),
+      colorScheme: isLight
+          ? ColorScheme.light(
+              primary: palette.accent,
+              secondary: palette.accentLight,
+              surface: palette.secondary,
+              error: palette.error,
+            )
+          : ColorScheme.dark(
+              primary: palette.accent,
+              secondary: palette.accentLight,
+              surface: palette.secondary,
+              error: palette.error,
+            ),
       appBarTheme: AppBarTheme(
         backgroundColor: palette.background,
         elevation: 0,
