@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/app_providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../widgets/custom_toast.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -15,47 +16,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _clearDatabase() async {
     final storage = ref.read(storageServiceProvider);
-    final palette = ThemeManager.currentTheme;
-
-    showDialog(
+    CustomToast.showDialogBox(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: palette.secondary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: palette.border.withOpacity(0.3)),
-          ),
-          title: Text(
-            "Clear Database",
-            style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            "Are you sure you want to permanently erase all chat logs, user profiles, routing tables, and security keys? This cannot be undone.",
-            style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 13, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("CANCEL", style: TextStyle(color: palette.textSecondary)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: palette.error),
-              onPressed: () async {
-                await storage.clearAllData();
-                Navigator.of(context).pop();
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Database erased. Please restart the terminal app.'),
-                    backgroundColor: palette.error,
-                  ),
-                );
-              },
-              child: const Text("ERASE DATA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            )
-          ],
-        );
+      title: "Erase App Data",
+      content: "Are you sure you want to permanently delete all chats and reset your profile? This action cannot be undone.",
+      confirmText: "Erase All",
+      cancelText: "Cancel",
+      onConfirm: () async {
+        await storage.clearAllData();
+        if (mounted) {
+          CustomToast.show(context, "App data erased. Please restart the app.");
+        }
       },
     );
   }
@@ -85,11 +56,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: Icon(Icons.radar_rounded, color: palette.accent),
                 title: Text(
-                  "Simulation Mode Overlay",
-                  style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                  "Simulator Mode",
+                  style: GoogleFonts.inter(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  "Run a virtual 2D topology network in-memory to simulate multi-hop routing paths.",
+                  "Run a simulated map to test messaging when devices are far apart.",
                   style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
                 ),
                 trailing: Switch(
@@ -104,8 +75,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: Icon(Icons.vpn_key_rounded, color: palette.textSecondary),
                 title: Text(
-                  "Public Key Fingerprint",
-                  style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                  "Device Security Key",
+                  style: GoogleFonts.inter(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
                   profile.publicKey.substring(0, 36) + "...",
@@ -131,11 +102,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: Icon(Icons.storage_rounded, color: palette.textSecondary),
                 title: Text(
-                  "Database Storage Size",
-                  style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                  "App Storage",
+                  style: GoogleFonts.inter(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  "Total: ~280 KB (Hive local storage tables)",
+                  "Total: ~280 KB used locally",
                   style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
                 ),
               ),
@@ -143,11 +114,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: Icon(Icons.delete_forever_rounded, color: palette.error),
                 title: Text(
-                  "Erase All Database Tables",
-                  style: GoogleFonts.poppins(color: palette.error, fontSize: 14, fontWeight: FontWeight.w600),
+                  "Delete All App Data",
+                  style: GoogleFonts.inter(color: palette.error, fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  "Resets security credentials, clears mesh caches, and logs.",
+                  "Resets profile, security keys, and clears all chats.",
                   style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
                 ),
                 onTap: _clearDatabase,
@@ -162,7 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Column(
             children: [
               Text(
-                "OfflineMesh Protocol v1.2.0-Alpha",
+                "Offline Connection Service v1.2.0",
                 style: GoogleFonts.spaceGrotesk(
                   color: palette.textSecondary.withOpacity(0.4),
                   fontSize: 10,
@@ -172,7 +143,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                "E2E LINK SECURITY HANDSHAKE ACTIVE",
+                "SECURE CONNECTION SHIELD ACTIVE",
                 style: GoogleFonts.spaceGrotesk(
                   color: palette.success.withOpacity(0.5),
                   fontSize: 8,
@@ -189,42 +160,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showPublicKeyDialog(BuildContext context, String pubKey) {
-    final palette = ThemeManager.currentTheme;
-    showDialog(
+    CustomToast.showDialogBox(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: palette.secondary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: palette.border.withOpacity(0.3)),
-          ),
-          title: Text(
-            "Terminal Public Key",
-            style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: palette.border.withOpacity(0.25)),
-              ),
-              child: Text(
-                pubKey,
-                style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.white70),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("DISMISS", style: GoogleFonts.spaceGrotesk(color: palette.accent, fontWeight: FontWeight.bold)),
-            )
-          ],
-        );
-      },
+      title: "Device Security Key",
+      content: "This unique key secures all your offline chats:\n\n$pubKey",
+      confirmText: "Dismiss",
+      cancelText: "",
+      onConfirm: () {},
     );
   }
 }

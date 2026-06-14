@@ -22,7 +22,7 @@ import '../../data/services/audio_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
-import '../widgets/avatar_view.dart';
+import '../widgets/custom_toast.dart';
 
 
 class ChatDetailsScreen extends ConsumerStatefulWidget {
@@ -231,39 +231,13 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   }
 
   void _showOversizedWarning() {
-    final palette = ThemeManager.currentTheme;
-    showDialog(
+    CustomToast.showDialogBox(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: palette.secondary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: palette.border.withOpacity(0.3)),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.warning_rounded, color: palette.accent),
-              const SizedBox(width: 8),
-              Text(
-                "File Too Large",
-                style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          content: Text(
-            "To maintain mesh network routing stability and avoid Bluetooth transmission timeouts, the offline file size limit is set to 500 KB.\n\nPlease select a smaller file.",
-            style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 13, height: 1.4),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: palette.accent),
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("DISMISS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
+      title: "File Too Large",
+      content: "To maintain transfer speed and connection stability, the offline file size limit is set to 500 KB.\n\nPlease select a smaller file.",
+      confirmText: "Dismiss",
+      cancelText: "",
+      onConfirm: () {},
     );
   }
 
@@ -728,17 +702,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                       final newStatus = !isVerified;
                                       await ref.read(verifiedUsersProvider.notifier).verifyUser(widget.chatId, newStatus);
                                       Navigator.of(context).pop();
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            newStatus
-                                                ? "Secured peer verified successfully!"
-                                                : "Peer marked as unverified.",
-                                            style: const TextStyle(fontWeight: FontWeight.bold),
-                                          ),
-                                          backgroundColor: newStatus ? AppTheme.mintGreen : AppTheme.surfaceColor,
-                                        ),
-                                      );
+                                      CustomToast.show(context, newStatus ? "Contact verified successfully!" : "Contact unverified.");
                                     },
                                     child: Container(
                                       width: double.infinity,
@@ -789,15 +753,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                                             
                                             if (context.mounted) {
                                               Navigator.of(context).pop(); // Close sheet
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    "Handshake complete! Secure identity verified via QR Scan.",
-                                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                                  ),
-                                                  backgroundColor: AppTheme.mintGreen,
-                                                ),
-                                              );
+                                              CustomToast.show(context, "Identity verified successfully via QR Scan.");
                                             }
                                           },
                                           onCancel: () {
@@ -1092,12 +1048,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
         });
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Microphone permission is required to record voice notes."),
-          backgroundColor: AppTheme.crimsonRed,
-        ),
-      );
+      CustomToast.show(context, "Microphone permission is required to record voice notes.");
     }
   }
 
@@ -2179,59 +2130,16 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   }
 
   void _showMessageHopsInfo(MessageModel message) {
-    showDialog(
+    final pathString = message.routePath.isEmpty
+        ? "Connected Directly"
+        : message.routePath.join(" ➔ ");
+    CustomToast.showDialogBox(
       context: context,
-      builder: (context) {
-        final pathString = message.routePath.isEmpty
-            ? "Direct Connection"
-            : message.routePath.join(" ➔ ");
-        return AlertDialog(
-          backgroundColor: AppTheme.surfaceColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(Icons.hub_outlined, color: AppTheme.electricBlueLight),
-              SizedBox(width: 8),
-              Text("Message Hops Info", style: TextStyle(color: AppTheme.textColorPrimary, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Routing Path:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textColorSecondary)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.borderLight),
-                ),
-                child: Text(
-                  pathString,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: AppTheme.electricBlueLight,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text("Hop Count: ${message.routePath.length}", style: TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              Text("Status: ${message.status.toUpperCase()}", style: TextStyle(color: AppTheme.textColorPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("Close", style: TextStyle(color: AppTheme.mintGreen, fontWeight: FontWeight.bold)),
-            )
-          ],
-        );
-      },
+      title: "Delivery Path",
+      content: "Path: $pathString\nSteps: ${message.routePath.length}\nStatus: ${message.status}",
+      confirmText: "Dismiss",
+      cancelText: "",
+      onConfirm: () {},
     );
   }
 }
@@ -2501,9 +2409,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
         } catch (e) {
           print("Error playing audio: $e");
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Error playing audio: $e")),
-            );
+            CustomToast.show(context, "Error playing audio: $e");
           }
         } finally {
           if (mounted) {

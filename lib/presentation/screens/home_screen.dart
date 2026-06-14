@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +13,7 @@ import 'chat_details_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/mesh_simulator_view.dart';
 import '../widgets/ambient_background.dart';
+import '../widgets/custom_toast.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -27,10 +26,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
 
   final List<String> _titles = [
-    "Secure Chats",
-    "Mesh Channels",
-    "Discover Beacons",
-    "Terminal Settings"
+    "Chats",
+    "Channels",
+    "Nearby",
+    "Settings"
   ];
 
   @override
@@ -139,7 +138,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Expanded(child: _buildNavItem(0, Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats', palette)),
                     Expanded(child: _buildNavItem(1, Icons.group_outlined, Icons.group_rounded, 'Channels', palette)),
-                    Expanded(child: _buildNavItem(2, Icons.radar_outlined, Icons.radar_rounded, 'Discover', palette)),
+                    Expanded(child: _buildNavItem(2, Icons.radar_outlined, Icons.radar_rounded, 'Nearby', palette)),
                     Expanded(child: _buildNavItem(3, Icons.terminal_outlined, Icons.terminal_rounded, 'Settings', palette)),
                   ],
                 ),
@@ -196,9 +195,9 @@ class _CommunitiesTabState extends ConsumerState<_CommunitiesTab> {
   final List<Map<String, dynamic>> _predefinedCommunities = [
     {
       'id': 'emergency_sos',
-      'name': '🚨 EMERGENCY SOS BROADCAST',
-      'desc': 'Floods localized emergency coordinates to all devices. Keep channels open.',
-      'tag': '#emergency',
+      'name': '🚨 EMERGENCY ALERTS',
+      'desc': 'Broadcast emergency alerts and coordinates to all nearby devices.',
+      'tag': '#alerts',
       'icon': '🚨',
       'category': 'BROADCAST',
       'online': 14,
@@ -208,7 +207,7 @@ class _CommunitiesTabState extends ConsumerState<_CommunitiesTab> {
     {
       'id': 'community_lounge',
       'name': '💬 LOCAL LOUNGE',
-      'desc': 'Casual public frequency for nearby users. Drop a hi to discover who is around.',
+      'desc': 'Casual public channel for nearby users. Drop a message to see who is around.',
       'tag': '#general',
       'icon': '💬',
       'category': 'PUBLIC DISCUSSION',
@@ -218,19 +217,19 @@ class _CommunitiesTabState extends ConsumerState<_CommunitiesTab> {
     },
     {
       'id': 'community_tech',
-      'name': '🛠️ TECH & SIGNAL DIAGNOSTICS',
-      'desc': 'Frequencies for debugging routes, discussing hardware setups, and network traces.',
-      'tag': '#dev',
+      'name': '🛠️ DIAGNOSTICS & SETUP',
+      'desc': 'Discuss offline network settings, layouts, and connection details.',
+      'tag': '#setup',
       'icon': '🛠️',
-      'category': 'MESH DEV',
+      'category': 'DISCUSSION',
       'online': 9,
       'members': 148,
       'avatars': ['🤖', '🛰️', '🛸', '⚡'],
     },
     {
       'id': 'community_marketplace',
-      'name': '🛒 OFFLINE CLASSIFIEDS',
-      'desc': 'Decentralized neighborhood directory to post trades, items, or services offline.',
+      'name': '🛒 LOCAL MARKETPLACE',
+      'desc': 'Local classifieds to post and browse items or services completely offline.',
       'tag': '#market',
       'icon': '🛒',
       'category': 'TRADE',
@@ -441,7 +440,7 @@ class _CommunitiesTabState extends ConsumerState<_CommunitiesTab> {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      "${com['online']} ONLINE  /  ${com['members']} PEERS",
+                                      "${com['online']} active  /  ${com['members']} members",
                                       style: GoogleFonts.spaceGrotesk(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w800,
@@ -584,9 +583,9 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
                               children: [
                                 Text(
                                   chat.name,
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.inter(
                                     color: palette.textPrimary,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                     fontSize: 16,
                                   ),
                                 ),
@@ -596,35 +595,75 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
                                 ],
                               ],
                             ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                isGroup ? 'Active Relay Channel' : 'Secure Point-to-Point Node',
-                                style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
-                              ),
+                            subtitle: Builder(
+                              builder: (context) {
+                                final messages = ref.watch(storageServiceProvider).getMessagesForChat(chat.chatId);
+                                if (messages.isEmpty) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Text(
+                                      'No messages yet',
+                                      style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
+                                    ),
+                                  );
+                                }
+                                final lastMessage = messages.last;
+                                String textContent = '';
+                                if (lastMessage.messageType == 'text') {
+                                  textContent = lastMessage.content;
+                                } else if (lastMessage.messageType == 'image') {
+                                  textContent = '📷 Photo';
+                                } else if (lastMessage.messageType == 'audio') {
+                                  textContent = '🎙️ Voice message';
+                                } else if (lastMessage.messageType == 'location') {
+                                  textContent = '📍 Location';
+                                } else {
+                                  textContent = '📄 File';
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    textContent,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
+                                  ),
+                                );
+                              }
                             ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '20:41',
-                                  style: GoogleFonts.inter(color: palette.textSecondary.withOpacity(0.7), fontSize: 10),
-                                ),
-                                const SizedBox(height: 6),
-                                if (index == 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: palette.accent,
-                                      borderRadius: BorderRadius.circular(10),
+                            trailing: Builder(
+                              builder: (context) {
+                                final messages = ref.watch(storageServiceProvider).getMessagesForChat(chat.chatId);
+                                if (messages.isEmpty) return const SizedBox();
+                                final lastMessage = messages.last;
+                                final myId = ref.watch(profileProvider)?.userId;
+                                final unreadCount = messages.where((m) => m.senderId != myId && m.status != 'read').length;
+                                final timeStr = "${lastMessage.timestamp.hour.toString().padLeft(2, '0')}:${lastMessage.timestamp.minute.toString().padLeft(2, '0')}";
+
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      timeStr,
+                                      style: GoogleFonts.inter(color: palette.textSecondary.withOpacity(0.7), fontSize: 10),
                                     ),
-                                    child: const Text(
-                                      '2',
-                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                    ),
-                                  )
-                              ],
+                                    const SizedBox(height: 6),
+                                    if (unreadCount > 0)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: palette.accent,
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '$unreadCount',
+                                          style: TextStyle(color: palette.background, fontSize: 10, fontWeight: FontWeight.bold),
+                                        ),
+                                      )
+                                  ],
+                                );
+                              }
                             ),
                             onTap: () {
                               Navigator.of(context).push(
@@ -667,7 +706,7 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
         },
         style: TextStyle(color: palette.textPrimary, fontSize: 14),
         decoration: InputDecoration(
-          hintText: "Search terminals...",
+          hintText: "Search chats...",
           hintStyle: TextStyle(color: palette.textSecondary.withOpacity(0.6)),
           prefixIcon: Icon(Icons.search_rounded, color: palette.textSecondary),
           border: InputBorder.none,
@@ -692,12 +731,12 @@ class _ChatsTabState extends ConsumerState<_ChatsTab> {
           ),
           const SizedBox(height: 16),
           Text(
-            "No Terminal Links Found",
-            style: GoogleFonts.spaceGrotesk(color: palette.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+            "No Chats Found",
+            style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold, color: palette.textPrimary),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
-            "Go to the Discover tab to connect to nearby nodes.",
+            "Go to the Discover tab to search for nearby users.",
             style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
           ),
         ],
@@ -715,12 +754,7 @@ class _DiscoverTab extends ConsumerWidget {
     final storage = ref.read(storageServiceProvider);
     final profile = ref.read(profileProvider);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Establishing secure handshake with ${peer.name}...'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    CustomToast.show(context, 'Connecting to ${peer.name}...');
 
     // 1. Initiate connection
     await commService.connectToPeer(peer);
@@ -800,7 +834,7 @@ class _DiscoverTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Test packet traces, node relocations, and routing hop algorithms on a virtual 2D terminal grid map.',
+                    'Test connection routing and message forwarding on a virtual 2D map.',
                     style: GoogleFonts.inter(fontSize: 12, color: palette.textSecondary, height: 1.45),
                   ),
                   const SizedBox(height: 16),
@@ -820,7 +854,7 @@ class _DiscoverTab extends ConsumerWidget {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        'LAUNCH SIMULATION BOARD',
+                        'LAUNCH SIMULATION MAP',
                         style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
                       ),
                     ),
@@ -833,7 +867,7 @@ class _DiscoverTab extends ConsumerWidget {
 
           // Discover peer list title
           Text(
-            'NEARBY ACTIVE BEACONS',
+            'PEOPLE NEARBY',
             style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.w800, color: palette.textSecondary, letterSpacing: 1.5),
           ),
           const SizedBox(height: 10),
@@ -854,7 +888,7 @@ class _DiscoverTab extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Listening for BLE beacons...',
+                          'Searching for nearby people...',
                           style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 12),
                         ),
                       ],
@@ -888,7 +922,7 @@ class _DiscoverTab extends ConsumerWidget {
                           style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, color: palette.textPrimary),
                         ),
                         subtitle: Text(
-                          'RSSI: -${60 + (peer.deviceId.hashCode % 20)} dBm • Secure Handshake Ready',
+                          'Nearby • Tap to connect',
                           style: GoogleFonts.inter(fontSize: 11, color: palette.textSecondary),
                         ),
                         trailing: Icon(Icons.link_rounded, color: palette.accent),
@@ -1227,11 +1261,11 @@ class _ProfileTab extends ConsumerWidget {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(
-                        "Rotate Encryption Keys",
-                        style: GoogleFonts.poppins(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                        "Reset Security Keys",
+                        style: GoogleFonts.inter(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
-                        "Generate new RSA pair. Invalidates older chat logs.",
+                        "Generate new keys. This will make old chats unreadable.",
                         style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 11),
                       ),
                       trailing: ElevatedButton(
@@ -1242,7 +1276,7 @@ class _ProfileTab extends ConsumerWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         onPressed: () => _confirmRotateKeys(context, ref),
-                        child: Text("ROTATE", style: TextStyle(color: palette.error, fontSize: 11, fontWeight: FontWeight.bold)),
+                        child: Text("RESET", style: TextStyle(color: palette.error, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -1261,12 +1295,7 @@ class _ProfileTab extends ConsumerWidget {
                             await ref.read(profileProvider.notifier).updateProfile(name, currentAvatar);
                             if (context.mounted) {
                               Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Profile updated successfully!"),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              CustomToast.show(context, "Profile updated successfully!");
                             }
                           }
                         },
@@ -1287,49 +1316,18 @@ class _ProfileTab extends ConsumerWidget {
   }
 
   void _confirmRotateKeys(BuildContext context, WidgetRef ref) {
-    final palette = ThemeManager.currentTheme;
-    showDialog(
+    CustomToast.showDialogBox(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: palette.secondary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: palette.border.withOpacity(0.3)),
-          ),
-          title: Text(
-            "Rotate Keys?",
-            style: GoogleFonts.spaceGrotesk(color: palette.error, fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            "WARNING: Generating a new cryptographic keypair will render all previous E2E encrypted messages in your chats unreadable. Peers will need to fetch your new public key to message you safely.\n\nDo you wish to proceed?",
-            style: GoogleFonts.inter(color: palette.textSecondary, fontSize: 13, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("CANCEL", style: TextStyle(color: palette.textSecondary)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: palette.error),
-              onPressed: () async {
-                await ref.read(profileProvider.notifier).resetKeys();
-                if (context.mounted) {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Close sheet
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text("RSA security keys rotated successfully!"),
-                      backgroundColor: palette.success,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              child: const Text("ROTATE KEYS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
+      title: "Reset Security Keys?",
+      content: "WARNING: Resetting your security keys will make your previous message history unreadable. Your contacts will need to connect with you again to chat.\n\nDo you wish to proceed?",
+      confirmText: "Reset Keys",
+      cancelText: "Cancel",
+      onConfirm: () async {
+        await ref.read(profileProvider.notifier).resetKeys();
+        if (context.mounted) {
+          Navigator.of(context).pop(); // Close sheet
+          CustomToast.show(context, "Security keys reset successfully!");
+        }
       },
     );
   }

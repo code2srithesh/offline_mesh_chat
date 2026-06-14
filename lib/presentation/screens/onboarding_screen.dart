@@ -10,6 +10,7 @@ import '../../providers/app_providers.dart';
 import '../../core/theme/app_theme.dart';
 import 'home_screen.dart';
 import '../widgets/ambient_background.dart';
+import '../widgets/custom_toast.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -30,22 +31,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
   final List<String> _avatars = ["🚀", "🦊", "👾", "🤖", "🐼", "🦁", "🦖", "🦄", "🛰️", "🛸", "⚡", "🔮"];
 
-  // Cryptographic Key Generation States
+  // Setup Progress States
   int _loadingStep = 0;
   Timer? _loadingTimer;
   final List<String> _loadingLogs = [
-    "[INFO] Initializing cryptographic entropy pool...",
-    "[OK] Entropy pool seeded with local hardware parameters.",
-    "[INFO] Generating 2048-bit prime numbers (p, q)...",
-    "[OK] Prime p candidate generated: 0xFD4E...8B7A",
-    "[OK] Prime q candidate generated: 0xE8A2...C9F3",
-    "[INFO] Computing modulus n = p * q...",
-    "[OK] Cryptographic modulus n derived.",
-    "[INFO] Selecting public exponent e = 65537...",
-    "[INFO] Calculating private key exponent d...",
-    "[OK] RSA Key pair successfully verified.",
-    "[INFO] Saving secure key bundle to local vault...",
-    "[OK] Handshake parameters configured. Node online!"
+    "[INFO] Initializing secure configuration...",
+    "[OK] Local environment parameters set up.",
+    "[INFO] Generating secure profile key pair...",
+    "[OK] Key pair candidate created successfully.",
+    "[INFO] Verifying security keys...",
+    "[OK] Security credentials verified.",
+    "[INFO] Saving secure key pair locally...",
+    "[OK] Device configured. Setup complete!"
   ];
 
   // Animation Controllers for illustrations
@@ -149,7 +146,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Simulating Face ID ID Scan',
+                      'Face Verification',
                       style: GoogleFonts.spaceGrotesk(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -158,7 +155,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Verifying biometric key tokens to construct decentralized callsign parameters.',
+                      'Scanning face features to personalize your profile security.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 12,
@@ -195,14 +192,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                           _selectedAvatar = "🤖";
                         });
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('🧬 Biometric identification successful! Profile autofilled.'),
-                            backgroundColor: palette.accent,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
+                        CustomToast.show(context, 'Profile successfully configured.');
                       },
                       child: Container(
                         height: 50,
@@ -213,7 +203,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          'CANCEL & USE AUTOFILLED PROFILE',
+                          'AUTO-FILL PROFILE',
                           style: GoogleFonts.spaceGrotesk(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -236,14 +226,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   Future<void> _handleGetStarted() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter a display name to register your node.', style: TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: ThemeManager.currentTheme.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      CustomToast.show(context, 'Please enter a display name.');
       return;
     }
 
@@ -331,7 +314,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   ),
                   const SizedBox(height: 32),
                   Text(
-                    'GENERATING SECURITY VAULT',
+                    'GENERATING SECURE ACCESS',
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -341,7 +324,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Asymmetric RSA key pairs are being computed locally on your device.',
+                    'Secure credentials are being generated on your device.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 12,
@@ -451,9 +434,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
     return Scaffold(
       backgroundColor: palette.background,
-      body: AmbientBackground(
-        child: SafeArea(
-          child: Column(
+      body: Stack(
+        children: [
+          AmbientBackground(
+            child: SafeArea(
+              child: Column(
             children: [
               // Top Bar
               if (_currentPage < 3)
@@ -463,7 +448,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'MESH PROTOCOL',
+                        'OFFLINE MESH',
                         style: GoogleFonts.spaceGrotesk(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -497,26 +482,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   },
                   children: [
                     _buildSlide(
-                      title: 'Welcome to Mesh',
-                      description: 'Enter a decentralized world of point-to-point communication. Connect directly to peers nearby without towers or data cables.',
+                      title: 'Welcome',
+                      description: 'Connect directly with people nearby, completely offline. No cellular towers, internet, or data plans required.',
                       illustration: _WelcomeIllustration(rotation: _rotationController, pulse: _pulseController, accent: palette.accent),
                     ),
                     _buildSlide(
-                      title: 'E2E Encryption',
-                      description: 'All conversations are secured with localized asymmetric RSA keys. Your private keys never leave your terminal.',
+                      title: 'Private & Secure',
+                      description: 'All chats are securely locked on your device. Your data stays entirely yours, with security keys stored safely on your phone.',
                       illustration: _SecurityIllustration(pulse: _pulseController, accent: palette.accent, success: palette.accentLight),
                     ),
                     _buildSlide(
-                      title: 'Offline Hops',
-                      description: 'Alice to Diana, routed via Bob automatically. Messages store in neighbor database nodes until targets reconnect.',
+                      title: 'Automatic Delivery',
+                      description: 'Messages find the best path to deliver automatically. If a friend is far away, nearby devices help pass and store messages until they reconnect.',
                       illustration: _MeshHopsIllustration(progress: _routingController, accent: palette.accent, secondary: palette.accentLight),
                     ),
                     _buildLoginCardSlide(),
                   ],
                 ),
               ),
-
-              // Page Indicators and Action buttons (Only for slides 0-2)
               if (_currentPage < 3)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
@@ -575,9 +558,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                     ],
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         ),
+        if (_isLoading) _buildLoadingOverlay(palette),
+        ],
       ),
     );
   }
@@ -670,7 +656,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'SECURITY INITIALIZATION',
+                    'GET STARTED',
                     style: GoogleFonts.spaceGrotesk(
                       color: palette.accent,
                       fontSize: 10,
@@ -683,7 +669,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             ),
             const SizedBox(height: 16),
             Text(
-              'Terminal Setup',
+              'Create Profile',
               style: GoogleFonts.spaceGrotesk(
                 fontSize: 34,
                 fontWeight: FontWeight.w800,
@@ -693,7 +679,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             ),
             const SizedBox(height: 8),
             Text(
-              'Initialize RSA security parameters to secure E2E chats.',
+              'Set up your profile details to start chatting securely.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 14,
@@ -799,7 +785,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                     color: _isNameFocused ? palette.accent : palette.textSecondary,
                     fontWeight: FontWeight.bold,
                   ),
-                  prefixIcon: Icon(Icons.terminal_rounded, color: _isNameFocused ? palette.accent : palette.textSecondary),
+                  prefixIcon: Icon(Icons.person_outline_rounded, color: _isNameFocused ? palette.accent : palette.textSecondary),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
                 ),
@@ -862,7 +848,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'GENERATING RSA SECURITY KEYS...',
+                            'SETTING UP PROFILE SECURELY...',
                             style: GoogleFonts.spaceGrotesk(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -873,7 +859,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                         ],
                       )
                     : Text(
-                        'INITIALIZE PROTOCOL TERMINAL',
+                        'GET STARTED',
                         style: GoogleFonts.spaceGrotesk(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
