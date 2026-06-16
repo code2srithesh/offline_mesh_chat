@@ -55,6 +55,9 @@ dependencies:
   geolocator: ^14.0.2
   pointycastle: ^3.9.1
 
+dependency_overrides:
+  record_platform_interface: "<1.6.0"
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
