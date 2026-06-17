@@ -180,7 +180,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
       }
     } else if (type == 'pdf') {
       try {
-        final result = await FilePicker.platform.pickFiles(
+        final result = await FilePicker.pickFiles(
           type: FileType.any,
         );
         if (result != null && result.files.single.path != null) {
